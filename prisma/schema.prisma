@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  user_id  String  @id @default(uuid()) @db.VarChar(255)
+  email    String  @unique @db.VarChar(255)
+  password String  @db.VarChar(255)
+  username String?  @db.VarChar(255)
+  token    String? @db.VarChar(255)
+  profile_picture String? @db.VarChar(225)
+  bio     String?  @db.VarChar(255)
+
+  post Posts[]
+  follower Followers[]
+  following       Followers[] @relation("UserFollowing")
+
+  @@map("user")
+}
+
+model Posts {
+  post_id    String @id @default(uuid()) @db.VarChar(255)
+  user_id  String @default(uuid()) @db.VarChar(255)
+  media_url        String @db.Text
+  content String @db.Text
+
+  user Users @relation(fields: [user_id], references: [user_id])
+
+  comment Comments[]
+  like Likes[]
+
+  @@map("post")
+}
+
+model Comments {
+  comment_id    String @id @default(uuid()) @db.VarChar(255)
+  user_id  String @default(uuid()) @db.VarChar(255)
+  post_id       String @db.VarChar(255)
+  content String @db.Text
+
+  post Posts @relation(fields: [post_id], references: [post_id])
+
+  @@map("comment")
+}
+
+model Likes {
+  like_id    String @id @default(uuid()) @db.VarChar(255)
+  user_id  String @default(uuid()) @db.VarChar(255)
+  post_id       String @db.VarChar(255)
+
+  post Posts @relation(fields: [post_id], references: [post_id])
+
+  @@map("like")
+}
+
+model Followers {
+  follower_id    String @id @default(uuid()) @db.VarChar(255)
+  user_id  String @default(uuid()) @db.VarChar(255)
+  follower_user_id       String @db.VarChar(255)
+
+  user Users @relation(fields: [user_id], references: [user_id])
+  follower          Users  @relation("UserFollowing", fields: [follower_user_id], references: [user_id])
+
+
+  @@map("follower")
+}
+
