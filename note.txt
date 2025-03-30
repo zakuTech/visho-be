@@ -1,0 +1,30 @@
+npm install prisma --save-dev
+- meng download library prisma
+
+npx init prisma
+- meng inisialiasi project prisma dengan meng create folder prisma dan sebagainya. 
+
+npx prisma migrate dev --create-only --name nama_migrationnya
+- bikin migrate tpi create only dulu
+
+npx prisma migrate dev
+- menjalankan schema.prisma untuk men-generate migration sesuai model yang ada dalam schema.prisma
+- jika migration sudah ada, maka command ini hanya untuk men-generate tabel otomatis
+
+npx prisma db pull
+- kebalikan dari migrate dev, dimana schema.prisma akan otomatis membuat model sesuai dengan tabel yang sudah dibuat
+
+npx prisma generate
+- untuk mensave perubahan di prismanya 
+
+npx prisma migrate reset
+- reset ulang migrasi beserta datanya
+
+npx prisma db seed
+- menjalankan seed sesuai package.json prisma
+
+npm start
+- jalanin frontend
+
+nodemon src/main.js
+- jalanin backend
