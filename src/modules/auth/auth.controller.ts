@@ -35,13 +35,16 @@ export class AuthController {
     },
   })
   @Post('login')
+  @UseGuards(JwtAuthGuard)
   async login(@Body() req: LoginRequest): Promise<LoginResponse> {
     return await this.authService.login(req);
   }
 
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout' })
   @Post('logout')
-  async logout() {
-    return this.authService.logout();
+  @UseGuards(JwtAuthGuard)
+  async logout(@Request() req) {
+    return this.authService.logout(req?.user?.user_id);
   }
 }
