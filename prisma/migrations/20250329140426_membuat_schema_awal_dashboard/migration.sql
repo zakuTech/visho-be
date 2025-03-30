@@ -3,7 +3,7 @@ CREATE TABLE `user` (
     `user_id` VARCHAR(255) NOT NULL,
     `email` VARCHAR(255) NOT NULL,
     `password` VARCHAR(255) NOT NULL,
-    `username` VARCHAR(255) NULL,
+    `username` VARCHAR(255) NOT NULL,
     `token` VARCHAR(255) NULL,
     `profile_picture` VARCHAR(225) NULL,
     `bio` VARCHAR(255) NULL,

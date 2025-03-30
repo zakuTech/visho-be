@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,65 +8,62 @@ datasource db {
 }
 
 model Users {
-  user_id  String  @id @default(uuid()) @db.VarChar(255)
-  email    String  @unique @db.VarChar(255)
-  password String  @db.VarChar(255)
-  username String?  @db.VarChar(255)
-  token    String? @db.VarChar(255)
-  profile_picture String? @db.VarChar(225)
-  bio     String?  @db.VarChar(255)
-
-  post Posts[]
-  follower Followers[]
+  user_id         String      @id @default(uuid()) @db.VarChar(255)
+  email           String      @unique @db.VarChar(255)
+  password        String      @db.VarChar(255)
+  username        String      @db.VarChar(255)
+  token           String?     @db.VarChar(255)
+  profile_picture String?     @db.VarChar(225)
+  bio             String?     @db.VarChar(255)
   following       Followers[] @relation("UserFollowing")
+  follower        Followers[]
+  post            Posts[]
 
   @@map("user")
 }
 
 model Posts {
-  post_id    String @id @default(uuid()) @db.VarChar(255)
-  user_id  String @default(uuid()) @db.VarChar(255)
-  media_url        String @db.Text
-  content String @db.Text
+  post_id   String     @id @default(uuid()) @db.VarChar(255)
+  user_id   String     @default(uuid()) @db.VarChar(255)
+  media_url String     @db.Text
+  content   String     @db.Text
+  comment   Comments[]
+  like      Likes[]
+  user      Users      @relation(fields: [user_id], references: [user_id])
 
-  user Users @relation(fields: [user_id], references: [user_id])
-
-  comment Comments[]
-  like Likes[]
-
+  @@index([user_id], map: "post_user_id_fkey")
   @@map("post")
 }
 
 model Comments {
-  comment_id    String @id @default(uuid()) @db.VarChar(255)
-  user_id  String @default(uuid()) @db.VarChar(255)
-  post_id       String @db.VarChar(255)
-  content String @db.Text
+  comment_id String @id @default(uuid()) @db.VarChar(255)
+  user_id    String @default(uuid()) @db.VarChar(255)
+  post_id    String @db.VarChar(255)
+  content    String @db.Text
+  post       Posts  @relation(fields: [post_id], references: [post_id])
 
-  post Posts @relation(fields: [post_id], references: [post_id])
-
+  @@index([post_id], map: "comment_post_id_fkey")
   @@map("comment")
 }
 
 model Likes {
-  like_id    String @id @default(uuid()) @db.VarChar(255)
-  user_id  String @default(uuid()) @db.VarChar(255)
-  post_id       String @db.VarChar(255)
+  like_id String @id @default(uuid()) @db.VarChar(255)
+  user_id String @default(uuid()) @db.VarChar(255)
+  post_id String @db.VarChar(255)
+  post    Posts  @relation(fields: [post_id], references: [post_id])
 
-  post Posts @relation(fields: [post_id], references: [post_id])
-
+  @@index([post_id], map: "like_post_id_fkey")
   @@map("like")
 }
 
 model Followers {
-  follower_id    String @id @default(uuid()) @db.VarChar(255)
-  user_id  String @default(uuid()) @db.VarChar(255)
-  follower_user_id       String @db.VarChar(255)
+  follower_id      String @id @default(uuid()) @db.VarChar(255)
+  user_id          String @default(uuid()) @db.VarChar(255)
+  follower_user_id String @db.VarChar(255)
+  follower         Users  @relation("UserFollowing", fields: [follower_user_id], references: [user_id])
+  user             Users  @relation(fields: [user_id], references: [user_id])
 
-  user Users @relation(fields: [user_id], references: [user_id])
-  follower          Users  @relation("UserFollowing", fields: [follower_user_id], references: [user_id])
-
-
+  @@index([follower_user_id], map: "follower_follower_user_id_fkey")
+  @@index([user_id], map: "follower_user_id_fkey")
   @@map("follower")
 }
-
