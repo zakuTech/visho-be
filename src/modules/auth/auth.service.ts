@@ -44,7 +44,11 @@ export class AuthService {
 
     return { message: 'Success Login', access_token: token };
   }
-  async logout() {
+  async logout(userId: string) {
+    await this.userModel.update(
+      { token: null },
+      { where: { user_id: userId } },
+    );
     return { message: 'Logout Success' };
   }
 }
