@@ -1,34 +1,35 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
+// import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+// import { IsNotEmpty, IsOptional } from 'class-validator';
 
-export class RegisterRequest {
-  @ApiProperty()
-  @IsNotEmpty()
-  readonly email: string;
+// export class RegisterRequest {
+//     @ApiProperty()
+//     @IsNotEmpty()
+//     email: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
-  readonly password: string;
+//     @ApiProperty()
+//     @IsNotEmpty()
+//     password: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  readonly username?: string;
-}
+//     @ApiPropertyOptional()
+//     @IsOptional()
+//     username?: string;
+// }
 
-export class RegisterResponseType {
-  readonly message?: string;
-  readonly results: RegisterResponse;
-}
-export class RegisterResponse {
-  readonly user_id: string;
-  readonly username: string;
-  readonly email: string;
-}
+// export class RegisterResponseType {
+//     message: string;
+//     results: any; // Replace 'any' with a more specific type if available
+// }
 
-export class UserResponse {
-  readonly user_id: string;
-  readonly username: string;
-  readonly email: string;
-  readonly profile_picture?: string;
-  readonly bio?: string;
-}
+// export class RegisterResponse {
+//     user_id: string; // Adjust the type based on your requirements
+//     username: string;
+//     email: string;
+// }
+
+// export class UserResponse {
+//     user_id: string; // Adjust the type based on your requirements
+//     username: string;
+//     email: string;
+//     profile_picture?: string; // Optional field
+//     bio?: string; // Optional field
+// }
