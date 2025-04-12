@@ -1,25 +1,34 @@
-import { Injectable, HttpException, BadRequestException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  HttpException,
+  BadRequestException,
+  Inject,
+} from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { ValidationService } from '../prisma/validation.service';
 import { PostValidation } from './post.validation';
 import { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { PrismaService } from '../prisma/prisma.service';
-import { PostResponse, UpdatePostRequest, PostRequest } from './post.contract';
+import { PostResponse, PostResponseType, UpdatePostRequest, PostRequest } from './post.contract';
 
 @Injectable()
 export class PostService {
-    private prisma: PrismaService;
-    @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger;
-    private validationService: ValidationService;
+  private prisma: PrismaService;
+  @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger;
+  private validationService: ValidationService;
 
-    constructor(prisma: PrismaService, logger: Logger, validationService: ValidationService) {
-        this.prisma = prisma;
-        this.logger = logger;
-        this.validationService = validationService;
-    }
+  constructor(
+    prisma: PrismaService,
+    logger: Logger,
+    validationService: ValidationService,
+  ) {
+    this.prisma = prisma;
+    this.logger = logger;
+    this.validationService = validationService;
+  }
 
-    async createPost(req: { user_id: string; media_url?: string; content?: string }): Promise<PostResponse> {
+    async createPost(req: { user_id: string; media_url?: string; content?: string }): Promise<any> {
         const existingUser = await this.prisma.users.findFirst({
             where: { user_id: req.user_id },
         });
@@ -37,7 +46,7 @@ export class PostService {
         return newUser;
     }
 
-    async getAllPosts(): Promise<PostResponse[]> {
+    async getAllPosts(): Promise<any[]> {
         const posts = await this.prisma.posts.findMany();
         if (!posts.length) {
             throw new BadRequestException('No posts found');
@@ -45,7 +54,7 @@ export class PostService {
         return posts;
     }
 
-    async getPostById(postId: string): Promise<PostResponse> {
+    async getPostById(postId: string): Promise<any> {
         const post = await this.prisma.posts.findUnique({
             where: { post_id: postId },
         });
@@ -55,37 +64,36 @@ export class PostService {
         return post;
     }
 
-    async update(postId: string, req: UpdatePostRequest): Promise<{ message: string; results: PostResponse }> {
+    async update(postId: string, req: any): Promise<{ message: string; results: any }> {
       // ✅ Pastikan tipe updateRequest tidak unknown
       const updateRequest = this.validationService.validate(PostValidation.Update, req) as PostRequest;
 
-      const post = await this.prisma.posts.findUnique({
-          where: { post_id: postId },
-      });
-  
-      if (!post) {
-          throw new HttpException('Post not found', 404);
-      }
-  
-      const updatedPost = await this.prisma.posts.update({
-          where: { post_id: postId },
-          data: {
-              media_url: updateRequest.media_url, // ✅ Tidak error lagi
-              content: updateRequest.content,     // ✅ Tidak error lagi
-          }
-      });
-  
-      return {
-          message: 'Post updated successfully',
-          results: updatedPost,
-      };
-  }
-  
+    const post = await this.prisma.posts.findUnique({
+      where: { post_id: postId },
+    });
 
-    async deletePost(postId: string): Promise<{ message:string }> {
-       await this.prisma.posts.delete({
-           where:{ post_id : postId},
-       });
-       return { message:'Post berhasil dihapus' };
-   }
+    if (!post) {
+      throw new HttpException('Post not found', 404);
+    }
+
+    const updatedPost = await this.prisma.posts.update({
+      where: { post_id: postId },
+      data: {
+        media_url: updateRequest.media_url,
+        content: updateRequest.content,
+      },
+    });
+
+    return {
+      message: 'Post updated successfully',
+      results: updatedPost,
+    };
+  }
+
+  async deletePost(postId: string): Promise<{ message: string }> {
+    await this.prisma.posts.delete({
+      where: { post_id: postId },
+    });
+    return { message: 'Post berhasil dihapus' };
+  }
 }
