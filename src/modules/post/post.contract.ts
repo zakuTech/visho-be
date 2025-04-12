@@ -17,7 +17,7 @@ export class PostRequest {
 
 export class PostResponseType {
     message: string;
-    results: any; // Replace 'any' with the appropriate type if known
+    results: PostResponse; // Replace 'any' with the appropriate type if known
 }
 
 export class PostResponse {

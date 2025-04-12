@@ -18,7 +18,7 @@ export class CommentRequest {
 export class CommentResponseType {
     errors?: string[];
     message: string;
-    results?: any; // Replace 'any' with a more specific type if known
+    results?: CommentResponse; // Replace 'any' with a more specific type if known
 }
 
 export class CommentResponse {

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, Request, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
 import { CommentRequest, CommentResponse } from './comment.contract';
 import { CommentService } from './comment.service';
@@ -25,7 +25,7 @@ export class CommentController {
         },
     })
     @ApiResponse({ type: CommentResponse })
-    async postComment(@Body() req: CommentRequest): Promise<{ message: string; results: any }> {
+    async postComment(@Body() req: CommentRequest): Promise<{ message: string; results: CommentResponse }> {
         try {
             const response = await this.commentService.postComment(req);
             return {
@@ -39,14 +39,14 @@ export class CommentController {
 
     @Get('getAll')
     @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
-    async getAllComment(@Request() req: any): Promise<any> {
+    async getAllComment(): Promise<CommentResponse[]> {
         return await this.commentService.getAllComment();
     }
 
     @Get('getById/:id')
     @ApiOperation({ summary: 'Get Post by ID (Requires JWT)' })
     @ApiResponse({ type: CommentResponse })
-    async getCommentById(@Param('id') comment_id: string, @Request() req: any): Promise<any> {
+    async getCommentById(@Param('id') comment_id: string): Promise<CommentResponse> {
         return await this.commentService.getCommentById(comment_id);
     }
 
@@ -61,7 +61,7 @@ export class CommentController {
         },
     })
     @ApiResponse({ type: CommentResponse })
-    async update(@Param('id') comment_id:string ,@Body() req :CommentRequest): Promise<{ message:string; results:any }> {
+    async update(@Param('id') comment_id:string ,@Body() req :CommentRequest): Promise<{ message:string; results:CommentResponse }> {
         try {
             const response = await this.commentService.updateComment(comment_id, req);
             return {
@@ -76,7 +76,7 @@ export class CommentController {
    @Delete('delete/:id')
    @ApiOperation({ summary:'Delete Post by ID (Requires JWT)'})
    @ApiResponse({type : CommentResponse})
-   async deleteComment(@Param('id') comment_id:string ,@Request() req:any):Promise<{message:string}>{
+   async deleteComment(@Param('id') comment_id:string ):Promise<{message:string}>{
        await this.commentService.deleteComment(comment_id);
        return{message:'Post berhasil dihapus'};
    }
