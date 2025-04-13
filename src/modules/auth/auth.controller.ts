@@ -35,7 +35,6 @@ export class AuthController {
     },
   })
   @Post('login')
-  @UseGuards(JwtAuthGuard)
   async login(@Body() req: LoginRequest): Promise<LoginResponse> {
     return await this.authService.login(req);
   }
