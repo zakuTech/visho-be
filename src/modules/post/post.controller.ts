@@ -12,7 +12,7 @@ export class PostController {
         this.postService = postService;
     }
 
-    @Post('createPost')
+    @Post('create-post')
     @ApiOperation({ summary: 'Create Post' })
     @ApiBody({
         schema: {
@@ -33,13 +33,13 @@ export class PostController {
         };
     }
 
-    @Get('getAll')
+    @Get('get-all')
     @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
     async getAllPosts(): Promise<PostResponse[]> {
         return await this.postService.getAllPosts();
     }
 
-    @Get('getById/:id')
+    @Get('get-by-id/:id')
 @ApiOperation({ summary: 'Get Post by ID (Requires JWT)' })
 @ApiResponse({ type: PostResponseType })
 async getById(@Param('id') post_id: string): Promise<PostResponseType> {

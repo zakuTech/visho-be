@@ -12,7 +12,7 @@ export class CommentController {
         this.commentService = commentService;
     }
 
-    @Post('postComment')
+    @Post('post-comment')
     @ApiOperation({ summary: 'Post Comment' })
     @ApiBody({
         schema: {
@@ -37,13 +37,13 @@ export class CommentController {
         }
     }
 
-    @Get('getAll')
+    @Get('get-all')
     @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
     async getAllComment(): Promise<CommentResponse[]> {
         return await this.commentService.getAllComment();
     }
 
-    @Get('getById/:id')
+    @Get('get-by-id/:id')
     @ApiOperation({ summary: 'Get Post by ID (Requires JWT)' })
     @ApiResponse({ type: CommentResponse })
     async getCommentById(@Param('id') comment_id: string): Promise<CommentResponse> {
