@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { InjectModel } from '@nestjs/sequelize';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserResponse } from './user.contract';
 
@@ -19,7 +18,7 @@ export class UserService {
     this.prisma = prisma;
   }
 
-  async register(req: RegisterRequest): Promise<any> {
+  async register(req: RegisterRequest): Promise<UserResponse> {
     const existingUser = await this.prisma.users.findFirst({
       where: { username: req.username },
     });
