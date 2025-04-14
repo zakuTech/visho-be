@@ -15,7 +15,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { RegisterRequest, RegisterResponse } from './user.contract';
+import { RegisterRequest, RegisterResponse, UserResponse } from './user.contract';
 
 @Controller('user')
 @ApiTags('User')
@@ -57,7 +57,7 @@ export class UserController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req: any): Promise<any> {
+  async getProfile(@Request() req: any): Promise<UserResponse> {
     return await this.userService.getUser(req?.user?.user_id);
   }
 }

@@ -10,7 +10,7 @@ import { PostValidation } from './post.validation';
 import { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { PrismaService } from '../prisma/prisma.service';
-import { PostResponse, PostResponseType, UpdatePostRequest, PostRequest } from './post.contract';
+import { PostResponse, UpdatePostRequest, PostRequest } from './post.contract';
 
 @Injectable()
 export class PostService {
@@ -28,7 +28,7 @@ export class PostService {
     this.validationService = validationService;
   }
 
-    async createPost(req: { user_id: string; media_url?: string; content?: string }): Promise<any> {
+    async createPost(req: { user_id: string; media_url?: string; content?: string }): Promise<PostResponse> {
         const existingUser = await this.prisma.users.findFirst({
             where: { user_id: req.user_id },
         });
@@ -46,7 +46,7 @@ export class PostService {
         return newUser;
     }
 
-    async getAllPosts(): Promise<any[]> {
+    async getAllPosts(): Promise<PostResponse[]> {
         const posts = await this.prisma.posts.findMany();
         if (!posts.length) {
             throw new BadRequestException('No posts found');
@@ -54,7 +54,7 @@ export class PostService {
         return posts;
     }
 
-    async getPostById(postId: string): Promise<any> {
+    async getPostById(postId: string): Promise<PostResponse> {
         const post = await this.prisma.posts.findUnique({
             where: { post_id: postId },
         });
@@ -64,7 +64,7 @@ export class PostService {
         return post;
     }
 
-    async update(postId: string, req: any): Promise<{ message: string; results: any }> {
+    async update(postId: string, req: UpdatePostRequest): Promise<{ message: string; results: PostResponse }> {
       // ✅ Pastikan tipe updateRequest tidak unknown
       const updateRequest = this.validationService.validate(PostValidation.Update, req) as PostRequest;
 
