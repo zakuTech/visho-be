@@ -17,7 +17,7 @@ export class RegisterRequest {
 
 export class RegisterResponseType {
   message: string;
-  results: any;
+  results: RegisterResponse;
 }
 
 export class RegisterResponse {
@@ -33,3 +33,4 @@ export class UserResponse {
   profile_picture?: string;
   bio?: string;
 }
+
