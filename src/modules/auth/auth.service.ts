@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginRequest, LoginResponse } from './auth.contract';
-import { v4 as uuidv4 } from 'uuid';
+// import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
@@ -43,7 +43,9 @@ export class AuthService {
       where: { user_id: user.user_id },
       data: { token: token },
     });
-
+    console.log('Password dari request:', req.password);
+    console.log('Password di database:', user.password);
+    
     return { message: 'Success Login', access_token: token };
   }
   async logout(userId: string) {
