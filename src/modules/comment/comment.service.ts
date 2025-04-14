@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { Logger } from 'winston';
 import { ValidationService } from '../prisma/validation.service';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+// import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger as WinstonLogger } from 'winston';
 
 interface PostCommentRequest {
