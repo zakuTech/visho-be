@@ -1,42 +1,46 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { InjectModel } from '@nestjs/sequelize';
-import { UserModel } from './user.model';
-import {
-  RegisterResponse,
-  RegisterRequest,
-  RegisterResponseType,
-  UserResponse,
-} from './user.contract';
+import { PrismaService } from '../prisma/prisma.service';
+import { UserResponse } from './user.contract';
+
+interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+}
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(UserModel) private userModel: typeof UserModel) {}
+  private prisma: PrismaService;
 
-  async register(req: RegisterRequest): Promise<RegisterResponse> {
-    const existingUser = await this.userModel.findOne({
+  constructor(prisma: PrismaService) {
+    this.prisma = prisma;
+  }
+
+  async register(req: RegisterRequest): Promise<UserResponse> {
+    const existingUser = await this.prisma.users.findFirst({
       where: { username: req.username },
     });
     if (existingUser) {
       throw new BadRequestException('Username already exists');
     }
-
     const hashedPassword = await bcrypt.hash(req.password, 10);
-
-    const newUser = await this.userModel.create({
-      user_id: uuidv4(),
-      username: req.username,
-      email: req.email,
-      password: hashedPassword,
+    const newUser = await this.prisma.users.create({
+      data: {
+        user_id: uuidv4(),
+        username: req.username,
+        email: req.email,
+        password: hashedPassword,
+      },
     });
-
-    return newUser.toJSON();
+    return newUser;
   }
 
-  async getUser(userId: string): Promise<UserResponse> {
-    const user = await this.userModel.findOne({ where: { user_id: userId } });
+  async getUser(userId: string): Promise<UserResponse | null> {
+    const user = await this.prisma.users.findUnique({
+      where: { user_id: userId },
+    });
     if (!user) {
       throw new BadRequestException('User not found');
     }

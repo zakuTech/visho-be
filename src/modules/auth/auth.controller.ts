@@ -1,22 +1,7 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Get,
-  UseGuards,
-  Request,
-  HttpStatus,
-  HttpCode,
-} from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiTags,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LoginRequest, LoginResponse, AuthUser } from './auth.contract';
 
 @ApiTags('Auth')
@@ -35,7 +20,6 @@ export class AuthController {
     },
   })
   @Post('login')
-  @UseGuards(JwtAuthGuard)
   async login(@Body() req: LoginRequest): Promise<LoginResponse> {
     return await this.authService.login(req);
   }

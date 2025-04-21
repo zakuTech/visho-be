@@ -3,31 +3,28 @@ import {
   Post,
   Body,
   Get,
-  UseGuards,
   Request,
-  HttpStatus,
-  HttpCode,
+  UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
   ApiTags,
+  ApiOperation,
+  ApiBody,
   ApiResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
-import {
-  RegisterResponse,
-  RegisterRequest,
-  RegisterResponseType,
-  UserResponse,
-} from './user.contract';
+import { RegisterRequest, RegisterResponse, UserResponse } from './user.contract';
 
-@ApiTags('User')
 @Controller('user')
+@ApiTags('User')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  private userService: UserService;
+
+  constructor(userService: UserService) {
+    this.userService = userService;
+  }
 
   @Post('register')
   @ApiOperation({ summary: 'Register User' })
@@ -42,7 +39,12 @@ export class UserController {
     },
   })
   @ApiResponse({ type: RegisterResponse })
-  async register(@Body() req: RegisterRequest): Promise<RegisterResponseType> {
+  async register(
+    @Body() req: RegisterRequest,
+  ): Promise<{
+    message: string;
+    results: { user_id: string; username: string; email: string };
+  }> {
     const response = await this.userService.register(req);
     const { user_id, username, email } = response;
     return {
@@ -51,11 +53,11 @@ export class UserController {
     };
   }
 
+  @Get('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
-  @Get('profile')
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req): Promise<UserResponse> {
+  async getProfile(@Request() req: any): Promise<UserResponse> {
     return await this.userService.getUser(req?.user?.user_id);
   }
 }
