@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { CommentModule } from './modules/comment/comment.module';
 import { PostModule } from './modules/post/post.module';
+import { LikeModule } from './modules/like/like.module';
 import { CommonModule } from './common/common.module';
 
 @Module({
@@ -18,6 +19,7 @@ import { CommonModule } from './common/common.module';
     CommentModule,
     PostModule,
     CommonModule,
+    LikeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
