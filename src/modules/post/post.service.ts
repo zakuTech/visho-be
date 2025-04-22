@@ -10,7 +10,7 @@ import { PostValidation } from './post.validation';
 import { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { PrismaService } from '../prisma/prisma.service';
-import { PostResponse, UpdatePostRequest, PostRequest } from './post.contract';
+import { PostResponse, UpdatePostRequest, PostRequest, likeResponse } from './post.contract';
 
 @Injectable()
 export class PostService {
@@ -29,6 +29,7 @@ export class PostService {
   }
 
     async createPost(req: { user_id: string; media_url?: string; content?: string }): Promise<PostResponse> {
+      this.logger.info(`Create post request: ${JSON.stringify(req)}`);
         const existingUser = await this.prisma.users.findFirst({
             where: { user_id: req.user_id },
         });
@@ -43,6 +44,7 @@ export class PostService {
                 content: req.content,
             }
         });
+        this.logger.info(`post berhasil membuat postingan ${newUser.post_id}`);
         return newUser;
     }
 
@@ -64,6 +66,23 @@ export class PostService {
         return post;
     }
 
+    async getLikeByPost(postId: string): Promise<likeResponse> {
+      const post = await this.prisma.posts.findUnique({
+          where: { post_id: postId },
+      });
+      if (!post) {
+          throw new BadRequestException('Post not found');
+      }
+      const likeCount = await this.prisma.likes.count({
+        where: {
+          post_id: post.post_id
+        }
+      })
+      return {
+        ...post, likeCount: likeCount.toString()
+      };
+  }
+
     async update(postId: string, req: UpdatePostRequest): Promise<{ message: string; results: PostResponse }> {
       // ✅ Pastikan tipe updateRequest tidak unknown
       const updateRequest = this.validationService.validate(PostValidation.Update, req) as PostRequest;
@@ -84,6 +103,7 @@ export class PostService {
       },
     });
 
+    this.logger.info(`post berhasil update ${updatedPost.post_id}`);
     return {
       message: 'Post updated successfully',
       results: updatedPost,
@@ -94,6 +114,7 @@ export class PostService {
     await this.prisma.posts.delete({
       where: { post_id: postId },
     });
+    this.logger.info(`post berhasil dihapus ${postId}`);
     return { message: 'Post berhasil dihapus' };
   }
 }

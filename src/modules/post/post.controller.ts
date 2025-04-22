@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Patch, Delete, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
 import { PostService } from './post.service';
 import { ApiOperation, ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { PostRequest, PostResponse, PostResponseType, UpdatePostRequest } from './post.contract';
+import { likeResponse, PostRequest, PostResponse, PostResponseType, UpdatePostRequest } from './post.contract';
 
 @ApiTags('Post')
 @Controller('post')
@@ -45,6 +45,21 @@ export class PostController {
 async getById(@Param('id') post_id: string): Promise<PostResponseType> {
     try {
         const result = await this.postService.getPostById(post_id);
+        return {
+            message: 'Success get post by id',
+            results: result,
+        };
+    } catch (error) {
+        throw new HttpException(error.message, error.status || HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+
+@Get('like-count/:id')
+@ApiOperation({ summary: 'Get like count by post ID (Requires JWT)' })
+@ApiResponse({ type: likeResponse })
+async getLikeCount(@Param('id') post_id: string): Promise<{ message: string; results: likeResponse }> {
+    try {
+        const result = await this.postService.getLikeByPost(post_id);
         return {
             message: 'Success',
             results: result,

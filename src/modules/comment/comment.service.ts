@@ -3,8 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { Logger } from 'winston';
 import { ValidationService } from '../prisma/validation.service';
-// import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
-import { Logger as WinstonLogger } from 'winston';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { CommentValidation } from './comment.validation';
 
 interface PostCommentRequest {
   user_id: string;
@@ -22,7 +22,8 @@ interface Comment {
 @Injectable()
 export class CommentService {
   private prisma: PrismaService;
-  @Inject('winston') private readonly logger: WinstonLogger;
+  // @Inject('winston') private readonly logger: WinstonLogger;
+   @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger;
   private validationService: ValidationService;
 
   constructor(prisma: PrismaService, logger: Logger, validationService: ValidationService) {
@@ -32,6 +33,8 @@ export class CommentService {
   }
 
   async postComment(req: PostCommentRequest): Promise<Comment> {
+    const fadli: PostCommentRequest = this.validationService.validate( CommentValidation.PostComment, req) as PostCommentRequest;
+
     const user = await this.prisma.users.findUnique({
       where: { user_id: req.user_id },
     });
@@ -49,12 +52,12 @@ export class CommentService {
     const newComment = await this.prisma.comments.create({
       data: {
         comment_id: uuidv4(),
-        user_id: req.user_id,
-        post_id: req.post_id,
-        content: req.content,
+        user_id: fadli.user_id,
+        post_id: fadli.post_id,
+        content: fadli.content,
       }
     });
-    
+    this.logger.info(`comment berhasil dipost ${newComment.comment_id}`);
     return newComment;
   }
 
@@ -89,6 +92,7 @@ export class CommentService {
       },
    });
 
+   this.logger.info(`comment berhasil diupdate ${updatedComment.comment_id}`);
    return updatedComment;
  }
 
