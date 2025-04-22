@@ -32,3 +32,11 @@ export class UpdatePostRequest {
     media_url?: string; // Optional property
     content?: string; // Optional property
 }
+
+export class likeResponse {
+    post_id: string;
+    user_id: string;
+    media_url: string;
+    content: string;
+    likeCount : string
+}

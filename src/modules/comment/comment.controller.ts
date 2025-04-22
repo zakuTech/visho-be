@@ -1,12 +1,15 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, HttpException, HttpStatus, Inject} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
 import { CommentRequest, CommentResponse } from './comment.contract';
 import { CommentService } from './comment.service';
+import { Logger } from 'winston';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
 @Controller('comment')
 @ApiTags('Comment')
 export class CommentController {
     private commentService: CommentService;
+     @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger;
 
     constructor(commentService: CommentService) {
         this.commentService = commentService;
@@ -33,6 +36,7 @@ export class CommentController {
                 results: response,
             };
         } catch (error) {
+            this.logger.error(`comment error: ${error.message}`);
             throw new HttpException(error.message, error.status || HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -69,6 +73,7 @@ export class CommentController {
                 results :response,
             };
         } catch (error) {
+            this.logger.error(`update comment error: ${error.message}`);
             throw new HttpException(error.message,error.status || HttpStatus.INTERNAL_SERVER_ERROR);
         }
    }
