@@ -19,8 +19,27 @@ export class UserService {
   }
 
   async register(req: RegisterRequest): Promise<UserResponse> {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const usernameRegex = /^[a-zA-Z0-9_]{3,}$/;
+
+    if (!req.username || !usernameRegex.test(req.username)) {
+      throw new BadRequestException(
+        'Username must be at least 3 characters and may only contain letters, numbers, or underscores.',
+      );
+    }
+
+    if (!req.email || !emailRegex.test(req.email)) {
+      throw new BadRequestException('Invalid email format');
+    }
+
+    if (!req.password || req.password.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters');
+    }
+
     const existingUser = await this.prisma.users.findFirst({
-      where: { username: req.username },
+      where: {
+        OR: [{ username: req.username }, { email: req.email }],
+      },
     });
     if (existingUser) {
       throw new BadRequestException('Username already exists');
