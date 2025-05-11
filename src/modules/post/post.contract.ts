@@ -2,41 +2,36 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
 
 export class PostRequest {
-    @ApiProperty()
-    @IsNotEmpty()
-    user_id: string;
-
-    @ApiProperty()
-    @IsNotEmpty()
-    media_url: string;
-
-    @ApiPropertyOptional()
-    @IsNotEmpty()
-    content?: string;
+  @ApiProperty()
+  @IsNotEmpty()
+  content: string;
 }
 
 export class PostResponseType {
-    message: string;
-    results: PostResponse; // Replace 'any' with the appropriate type if known
+  message: string;
+  results: PostResponse[];
 }
 
 export class PostResponse {
-    post_id: string;
-    user_id: string;
-    media_url: string;
-    content: string;
+  post_id: string;
+  user_id: string;
+  media_url: string;
+  media_path: string;
+  content: string;
 }
 
 export class UpdatePostRequest {
-    post_id: string;
-    media_url?: string; // Optional property
-    content?: string; // Optional property
+  content?: string;
+}
+
+export class DeletePostRequest {
+  media_path: string;
 }
 
 export class likeResponse {
-    post_id: string;
-    user_id: string;
-    media_url: string;
-    content: string;
-    likeCount : string
+  post_id: string;
+  user_id: string;
+  media_url: string;
+  content: string;
+  likeCount: string;
 }
