@@ -17,6 +17,7 @@ CREATE TABLE `post` (
     `post_id` VARCHAR(255) NOT NULL,
     `user_id` VARCHAR(255) NOT NULL,
     `media_url` TEXT NOT NULL,
+    `media_path` TEXT NOT NULL,
     `content` TEXT NOT NULL,
 
     PRIMARY KEY (`post_id`)

@@ -20,7 +20,7 @@
   },
   "engines": {
     "npm": ">=10.0.0",
-    "node": ">=20.0.0"
+    "node": ">=16.0.0"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -32,6 +32,7 @@
     "@nestjs/sequelize": "^11.0.0",
     "@nestjs/swagger": "^11.1.0",
     "@prisma/client": "^6.5.0",
+    "@supabase/supabase-js": "^2.49.4",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
@@ -60,6 +61,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
+    "@types/multer": "^1.4.12",
     "@types/node": "^22.13.14",
     "@types/passport-jwt": "^4.0.1",
     "@types/sequelize": "^4.28.20",
