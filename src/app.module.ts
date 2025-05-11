@@ -8,7 +8,9 @@ import { UserModule } from './modules/user/user.module';
 import { CommentModule } from './modules/comment/comment.module';
 import { PostModule } from './modules/post/post.module';
 import { LikeModule } from './modules/like/like.module';
+import { SupabaseModule } from './modules/supabase/supabase.module';
 import { CommonModule } from './common/common.module';
+import { MediaController } from './media/media.controller';
 
 @Module({
   imports: [
@@ -20,7 +22,9 @@ import { CommonModule } from './common/common.module';
     PostModule,
     CommonModule,
     LikeModule,
+    SupabaseModule,
   ],
+
   controllers: [AppController],
   providers: [AppService],
 })
