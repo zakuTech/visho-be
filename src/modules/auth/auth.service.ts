@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Inject,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginRequest, LoginResponse } from './auth.contract';
@@ -16,43 +21,57 @@ export class AuthService {
   ) {}
 
   async login(req: LoginRequest): Promise<LoginResponse> {
-    this.logger.info(`START LOGIN WITH EMAIL ${req.email}`);
-    const user = await this.prisma.users.findFirst({
-      where: { email: req.email },
-    });
-    if (!user) {
-      throw new BadRequestException('User not found');
+    try {
+      this.logger.info(`START LOGIN WITH EMAIL ${req.email}`);
+      const user = await this.prisma.users.findFirst({
+        where: { email: req.email },
+      });
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      const isPasswordValid = await bcrypt.compare(req.password, user.password);
+      if (!isPasswordValid) {
+        throw new BadRequestException('Invalid password');
+      }
+
+      const token = this.jwtService.sign(
+        {
+          user_id: user.user_id,
+          username: user.username,
+        },
+        {
+          secret: process.env.JWT_SECRET,
+        },
+      );
+
+      await this.prisma.users.update({
+        where: { user_id: user.user_id },
+        data: { token: token },
+      });
+
+      return { message: 'Success Login', access_token: token };
+    } catch (error) {
+      this.logger.error(`LOGIN FAILED: ${error.message}`, error.stack);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Internal server error');
     }
-
-    const isPasswordValid = await bcrypt.compare(req.password, user.password);
-    if (!isPasswordValid) {
-      throw new BadRequestException('Invalid password');
-    }
-
-    const token = this.jwtService.sign(
-      {
-        user_id: user.user_id,
-        username: user.username,
-      },
-      {
-        secret: process.env.JWT_SECRET,
-      },
-    );
-
-    await this.prisma.users.update({
-      where: { user_id: user.user_id },
-      data: { token: token },
-    });
-    console.log('Password dari request:', req.password);
-    console.log('Password di database:', user.password);
-    
-    return { message: 'Success Login', access_token: token };
   }
   async logout(userId: string) {
-    await this.prisma.users.update({
-      where: { user_id: userId },
-      data: { token: null },
-    });
-    return { message: 'Logout Success' };
+    try {
+      await this.prisma.users.update({
+        where: { user_id: userId },
+        data: { token: null },
+      });
+      return { message: 'Logout Success' };
+    } catch (error) {
+      this.logger.error(`LOGOUT FAILED: ${error.message}`, error.stack);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Internal server error');
+    }
   }
 }
