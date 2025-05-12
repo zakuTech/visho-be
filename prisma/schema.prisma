@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -30,9 +30,9 @@ model Posts {
   content    String     @db.Text
   comment    Comments[]
   like       Likes[]
-  user       Users      @relation(fields: [user_id], references: [user_id])
+  user       Users      @relation(fields: [user_id], references: [user_id], map: "fk_post_user_id")
 
-  @@index([user_id], map: "post_user_id_fkey")
+  @@index([user_id], map: "idx_post_user_id")
   @@map("post")
 }
 
@@ -41,9 +41,9 @@ model Comments {
   user_id    String @default(uuid()) @db.VarChar(255)
   post_id    String @db.VarChar(255)
   content    String @db.Text
-  post       Posts  @relation(fields: [post_id], references: [post_id])
+  post       Posts  @relation(fields: [post_id], references: [post_id], map: "fk_comment_post_id")
 
-  @@index([post_id], map: "comment_post_id_fkey")
+  @@index([post_id], map: "idx_comment_post_id")
   @@map("comment")
 }
 
@@ -51,9 +51,9 @@ model Likes {
   like_id String @id @default(uuid()) @db.VarChar(255)
   user_id String @default(uuid()) @db.VarChar(255)
   post_id String @db.VarChar(255)
-  post    Posts  @relation(fields: [post_id], references: [post_id])
+  post    Posts  @relation(fields: [post_id], references: [post_id], map: "like_post_id_fkey")
 
-  @@index([post_id], map: "like_post_id_fkey")
+  @@index([post_id], map: "idx_like_post_id")
   @@map("like")
 }
 
@@ -61,10 +61,10 @@ model Followers {
   follower_id      String @id @default(uuid()) @db.VarChar(255)
   user_id          String @default(uuid()) @db.VarChar(255)
   follower_user_id String @db.VarChar(255)
-  follower         Users  @relation("UserFollowing", fields: [follower_user_id], references: [user_id])
-  user             Users  @relation(fields: [user_id], references: [user_id])
+  follower         Users  @relation("UserFollowing", fields: [follower_user_id], references: [user_id], map: "followers_follower_user_id_fkey")
+  user             Users  @relation(fields: [user_id], references: [user_id], map: "follower_user_id_fkey")
 
-  @@index([follower_user_id], map: "follower_follower_user_id_fkey")
-  @@index([user_id], map: "follower_user_id_fkey")
+  @@index([follower_user_id], map: "idx_followers_follower_id")
+  @@index([user_id], map: "idx_follower_user_id")
   @@map("follower")
 }
