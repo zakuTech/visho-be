@@ -23,13 +23,14 @@ model Users {
 }
 
 model Posts {
-  post_id   String     @id @default(uuid()) @db.VarChar(255)
-  user_id   String     @default(uuid()) @db.VarChar(255)
-  media_url String     @db.Text
-  content   String     @db.Text
-  comment   Comments[]
-  like      Likes[]
-  user      Users      @relation(fields: [user_id], references: [user_id])
+  post_id    String     @id @default(uuid()) @db.VarChar(255)
+  user_id    String     @default(uuid()) @db.VarChar(255)
+  media_url  String     @db.Text
+  media_path String     @db.Text
+  content    String     @db.Text
+  comment    Comments[]
+  like       Likes[]
+  user       Users      @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id], map: "post_user_id_fkey")
   @@map("post")
