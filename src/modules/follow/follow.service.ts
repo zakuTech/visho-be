@@ -1,5 +1,4 @@
 import { Injectable, HttpException, Inject } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import {
