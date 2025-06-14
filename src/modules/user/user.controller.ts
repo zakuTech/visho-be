@@ -1,36 +1,26 @@
 import {
   Controller,
   Post,
-  Get,
   Body,
-  UseInterceptors,
+  Get,
   Request,
   UseGuards,
-  UploadedFiles,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
+  ApiTags,
   ApiOperation,
   ApiBody,
   ApiResponse,
-  ApiTags,
-  ApiConsumes,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import {
   RegisterRequest,
   RegisterResponse,
   UserResponse,
-  UploadPhotoAndBioRequest,
 } from './user.contract';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
-interface RequestWithUser {
-  user: {
-    user_id: string;
-  };
-}
 @Controller('user')
 @ApiTags('User')
 export class UserController {
@@ -69,55 +59,7 @@ export class UserController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req: RequestWithUser): Promise<UserResponse> {
+  async getProfile(@Request() req: any): Promise<UserResponse> {
     return await this.userService.getUser(req?.user?.user_id);
-  }
-
-  @ApiBearerAuth()
-  @Post('upload-bio-photo')
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'profile', maxCount: 1 },
-        { name: 'cover', maxCount: 1 },
-      ],
-      {
-        limits: { fileSize: 5 * 1024 * 1024 },
-      },
-    ),
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload bio, profile & cover photo' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        bio: { type: 'string' },
-        profile: { type: 'string', format: 'binary' },
-        cover: { type: 'string', format: 'binary' },
-      },
-    },
-  })
-  @ApiResponse({ type: UserResponse })
-  @UseGuards(JwtAuthGuard)
-  async uploadPhotoAndBio(
-    @UploadedFiles()
-    files: { profile?: Express.Multer.File[]; cover?: Express.Multer.File[] },
-    @Body() body: UploadPhotoAndBioRequest,
-    @Request() req, // req.user.user_id dari JWT
-  ): Promise<{ message: string; results: UserResponse }> {
-    const response = await this.userService.uploadPhotoAndBio(
-      {
-        user_id: req.user.user_id,
-        username: req.user.username,
-        bio: body.bio,
-      },
-      files,
-    );
-
-    return {
-      message: 'Success upload photo profile or bio or cover profile',
-      results: response,
-    };
   }
 }
