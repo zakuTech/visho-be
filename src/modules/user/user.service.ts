@@ -21,7 +21,6 @@ interface RegisterRequest {
 export class UserService {
   private prisma: PrismaService;
   @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger;
-  @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger;
 
   constructor(prisma: PrismaService, logger: Logger) {
     this.prisma = prisma;
