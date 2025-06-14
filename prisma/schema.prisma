@@ -13,8 +13,11 @@ model Users {
   password        String      @db.VarChar(255)
   username        String      @db.VarChar(255)
   token           String?     @db.VarChar(255)
-  profile_picture String?     @db.VarChar(225)
   bio             String?     @db.VarChar(255)
+  photo_profile String?       @db.VarChar(225)
+  photo_profile_path String?  @db.VarChar(225)
+  cover_profile   String?     @db.VarChar(225)
+  cover_profile_path String?  @db.VarChar(225)
   following       Followers[] @relation("UserFollowing")
   follower        Followers[]
   post            Posts[]
