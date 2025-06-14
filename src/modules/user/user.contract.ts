@@ -13,6 +13,10 @@ export class RegisterRequest {
   @ApiPropertyOptional()
   @IsOptional()
   username: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  profile_picture?: string;
 }
 
 export class RegisterResponseType {
@@ -34,3 +38,12 @@ export class UserResponse {
   bio?: string;
 }
 
+export class UploadPhotoAndBioRequest {
+  user_id: string;
+  username: string;
+  photo_profile?: string;
+  photo_profile_path?: string;
+  bio?: string;
+  cover_profile?: string;
+  cover_profile_path?: string;
+}
