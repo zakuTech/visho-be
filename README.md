@@ -34,15 +34,18 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
-<!-- nudenet python -->
+<!-- NSFW2 python -->
 
 1. python --version
 2. install pip
-3. kalau pakai CMD
+3. python -m venv venv
+   pip install -r requirements.txt
+
+4. kalau pakai CMD
 
 - venv\Scripts\activate
 
-4. install depedency (pip install tensorflow tensorflow-hub pillow numpy)
+4. pip install -r openNSFW2/requirements.txt
 
 ## Deployment
 
