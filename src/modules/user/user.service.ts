@@ -7,7 +7,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
-import { UploadPhotoAndBioRequest, UserResponse } from './user.contract';
+import { editRequest, UserResponse } from './user.contract';
 import { SupabaseService } from '../supabase/supabase.service';
 import { sanitizeFileName } from 'src/media/media.controller';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
@@ -89,8 +89,8 @@ export class UserService {
     return user;
   }
 
-  async uploadPhotoAndBio(
-    req: UploadPhotoAndBioRequest,
+  async edit(
+    req: editRequest,
     files: { profile?: Express.Multer.File[]; cover?: Express.Multer.File[] },
   ): Promise<UserResponse> {
     this.logger.info(`Update photo or bio request: ${JSON.stringify(req)}`);
@@ -185,6 +185,7 @@ export class UserService {
         user_id: user.user_id,
       },
       data: {
+        username: req.username ?? user.username,
         bio: req.bio ?? user.bio,
         photo_profile: photoProfileUrl,
         photo_profile_path: photoProfilePath,
