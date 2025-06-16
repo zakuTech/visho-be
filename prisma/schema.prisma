@@ -8,19 +8,19 @@ datasource db {
 }
 
 model Users {
-  user_id         String      @id @default(uuid()) @db.VarChar(255)
-  email           String      @unique @db.VarChar(255)
-  password        String      @db.VarChar(255)
-  username        String      @db.VarChar(255)
-  token           String?     @db.VarChar(255)
-  bio             String?     @db.VarChar(255)
-  photo_profile String?       @db.VarChar(225)
-  photo_profile_path String?  @db.VarChar(225)
-  cover_profile   String?     @db.VarChar(225)
-  cover_profile_path String?  @db.VarChar(225)
-  following       Followers[] @relation("UserFollowing")
-  follower        Followers[]
-  post            Posts[]
+  user_id            String      @id @default(uuid()) @db.VarChar(255)
+  email              String      @unique @db.VarChar(255)
+  password           String      @db.VarChar(255)
+  username           String      @db.VarChar(255)
+  token              String?     @db.VarChar(255)
+  bio                String?     @db.VarChar(255)
+  photo_profile      String?     @db.VarChar(225)
+  photo_profile_path String?     @db.VarChar(225)
+  cover_profile      String?     @db.VarChar(225)
+  cover_profile_path String?     @db.VarChar(225)
+  following          Followers[] @relation("UserFollowing")
+  follower           Followers[]
+  post               Posts[]
 
   @@map("user")
 }
@@ -70,4 +70,14 @@ model Followers {
   @@index([follower_user_id], map: "idx_followers_follower_id")
   @@index([user_id], map: "idx_follower_user_id")
   @@map("follower")
+}
+
+model UserOtps {
+  otp_id     String   @id @default(uuid()) @db.VarChar(255)
+  email      String   @db.VarChar(255)
+  otp_code   String   @db.VarChar(6)
+  expires_at DateTime
+  verified   Boolean
+
+  @@map("user_otp")
 }
