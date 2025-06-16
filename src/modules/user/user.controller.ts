@@ -1,9 +1,8 @@
 import {
   Controller,
   Post,
-  Get,
   Body,
-  UseInterceptors,
+  Get,
   Request,
   UseGuards,
   UploadedFiles,
@@ -12,11 +11,10 @@ import {
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
+  ApiTags,
   ApiOperation,
   ApiBody,
   ApiResponse,
-  ApiTags,
-  ApiConsumes,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import {
@@ -25,13 +23,7 @@ import {
   UserResponse,
   editRequest,
 } from './user.contract';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
-interface RequestWithUser {
-  user: {
-    user_id: string;
-  };
-}
 @Controller('user')
 @ApiTags('User')
 export class UserController {
@@ -70,10 +62,9 @@ export class UserController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req: RequestWithUser): Promise<UserResponse> {
+  async getProfile(@Request() req: any): Promise<UserResponse> {
     return await this.userService.getUser(req?.user?.user_id);
   }
-
   @ApiBearerAuth()
   @Patch()
   @UseInterceptors(

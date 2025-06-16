@@ -122,63 +122,40 @@ export class UserService {
         );
       }
 
-      if (user.photo_profile) {
-        await this.supabaseService.deleteFile(
-          process.env.SUPABASE_BUCKET_NAME,
-          user.photo_profile,
-        );
+      if (!req.email || !emailRegex.test(req.email)) {
+        throw new BadRequestException('Invalid email format');
       }
 
-      await this.supabaseService.uploadFile(
-        process.env.SUPABASE_BUCKET_NAME,
-        profilePath,
-        file.buffer,
-        file.mimetype,
-      );
+      if (!req.password || req.password.length < 8) {
+        throw new BadRequestException('Password must be at least 8 characters');
+      }
 
-      photoProfileUrl = await this.supabaseService.getPublicUrl(
-        process.env.SUPABASE_BUCKET_NAME,
-        profilePath,
+      const existingUser = await this.prisma.users.findFirst({
+        where: {
+          OR: [{ username: req.username }, { email: req.email }],
+        },
+      });
+      if (existingUser) {
+        throw new BadRequestException('Username already exists');
+      }
+      const hashedPassword = await bcrypt.hash(req.password, 10);
+      const newUser = await this.prisma.users.create({
+        data: {
+          user_id: uuidv4(),
+          username: req.username,
+          email: req.email,
+          password: hashedPassword,
+        },
+      });
+      return newUser;
+    } catch (error) {
+      this.logger.error(
+        `Failed to register user: ${error.message}`,
+        error.stack,
       );
-
-      photoProfilePath = profilePath;
+      throw new HttpException('Failed to register user', error.status || 500);
     }
-
-    if (files?.cover?.[0]) {
-      const file = files.cover[0];
-      const sanitizedFileName = sanitizeFileName(file.originalname);
-      const filename = `${Date.now()}-${sanitizedFileName}`;
-      const coverPath = `test/cover/${filename}`;
-
-      // Hapus file lama jika ada
-      if (user.cover_profile_path) {
-        await this.supabaseService.deleteFile(
-          process.env.SUPABASE_BUCKET_NAME,
-          user.cover_profile_path,
-        );
-      }
-
-      if (user.cover_profile) {
-        await this.supabaseService.deleteFile(
-          process.env.SUPABASE_BUCKET_NAME,
-          user.cover_profile,
-        );
-      }
-
-      await this.supabaseService.uploadFile(
-        process.env.SUPABASE_BUCKET_NAME,
-        coverPath,
-        file.buffer,
-        file.mimetype,
-      );
-
-      coverProfileUrl = await this.supabaseService.getPublicUrl(
-        process.env.SUPABASE_BUCKET_NAME,
-        coverPath,
-      );
-
-      coverProfilePath = coverPath;
-    }
+  }
 
     const updatedUser = await this.prisma.users.update({
       where: {

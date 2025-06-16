@@ -43,7 +43,7 @@ export default async function post() {
         media_url: sampleContents[i].media_url,
         media_path: sampleContents[i].media_path,
         user: {
-          connect: { user_id: users[i].user_id }, // koneksi ke user by relasi
+          connect: { user_id: users[i].user_id }, 
         },
       },
     });
