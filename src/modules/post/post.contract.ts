@@ -1,10 +1,15 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
 
 export class PostRequest {
   @ApiProperty()
   @IsNotEmpty()
   content: string;
+  media_url?: string;
+  media_path?: string;
+  media_file_buffer?: Buffer;
+  media_file_mimetype?: string;
+  media_file_originalname?: string;
 }
 
 export class PostResponseType {

@@ -13,5 +13,8 @@
     "incremental": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
+    // "moduleResolution": "node",
+    // "esModuleInterop": true,
+    // "types": []
   }
 }

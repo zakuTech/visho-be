@@ -18,6 +18,7 @@ import {
 } from './post.contract';
 import { SupabaseService } from '../supabase/supabase.service';
 import { sanitizeFileName } from 'src/media/media.controller';
+import * as fs from 'fs';
 
 @Injectable()
 export class PostService {
@@ -36,10 +37,65 @@ export class PostService {
     this.validationService = validationService;
   }
 
+  // async createPost(req: {
+  //   user_id: string;
+  //   content: string;
+  //   media_file: Express.Multer.File;
+  // }): Promise<PostResponse> {
+  //   this.logger.info(`Create post request: ${JSON.stringify(req)}`);
+
+  //   try {
+  //     let mediaUrl: string | undefined;
+  //     let mediaPath: string | undefined;
+
+  //     if (req.media_file) {
+  //       const sanitizedFileName = sanitizeFileName(req.media_file.originalname);
+  //       const filename = `${Date.now()}-${sanitizedFileName}`;
+  //       mediaPath = `posts/${filename}`;
+
+  //       await this.supabaseService.uploadFile(
+  //         process.env.SUPABASE_BUCKET_NAME,
+  //         mediaPath,
+  //         req.media_file.buffer,
+  //         req.media_file.mimetype,
+  //       );
+
+  //       mediaUrl = await this.supabaseService.getPublicUrl(
+  //         process.env.SUPABASE_BUCKET_NAME,
+  //         mediaPath,
+  //       );
+  //     }
+
+  //     const existingUser = await this.prisma.users.findFirst({
+  //       where: { user_id: req.user_id },
+  //     });
+
+  //     if (!existingUser) {
+  //       throw new HttpException('User not found', 404);
+  //     }
+
+  //     const newPost = await this.prisma.posts.create({
+  //       data: {
+  //         post_id: uuidv4(),
+  //         user_id: existingUser.user_id,
+  //         media_path: mediaPath,
+  //         media_url: mediaUrl,
+  //         content: req.content,
+  //       },
+  //     });
+
+  //     this.logger.info(`Post created successfully: ${newPost.post_id}`);
+  //     return newPost;
+  //   } catch (error) {
+  //     this.logger.error(`Failed to create post: ${error.message}`, error.stack);
+  //     throw new HttpException('Failed to create post', error.status || 500);
+  //   }
+  // }
+
   async createPost(req: {
     user_id: string;
     content: string;
-    media_file: Express.Multer.File;
+    media_file?: Express.Multer.File; // Bisa undefined
   }): Promise<PostResponse> {
     this.logger.info(`Create post request: ${JSON.stringify(req)}`);
 
@@ -48,21 +104,34 @@ export class PostService {
       let mediaPath: string | undefined;
 
       if (req.media_file) {
-        const sanitizedFileName = sanitizeFileName(req.media_file.originalname);
+        const buffer = req.media_file.buffer;
+        const mimetype = req.media_file.mimetype;
+        const originalname = req.media_file.originalname;
+        const sanitizedFileName = sanitizeFileName(originalname);
         const filename = `${Date.now()}-${sanitizedFileName}`;
         mediaPath = `posts/${filename}`;
+
+        console.log('Uploading to Supabase...', { mediaPath });
 
         await this.supabaseService.uploadFile(
           process.env.SUPABASE_BUCKET_NAME,
           mediaPath,
-          req.media_file.buffer,
-          req.media_file.mimetype,
+          buffer,
+          mimetype,
         );
+
+        console.log('Upload done, getting public URL...');
 
         mediaUrl = await this.supabaseService.getPublicUrl(
           process.env.SUPABASE_BUCKET_NAME,
           mediaPath,
         );
+
+        try {
+          fs.unlinkSync(req.media_file.path);
+        } catch (err) {
+          this.logger.warn(`Gagal hapus file lokal: ${err.message}`);
+        }
       }
 
       const existingUser = await this.prisma.users.findFirst({
