@@ -8,8 +8,8 @@ import {
   Param,
   HttpException,
   HttpStatus,
-  UploadedFile,
-  UseInterceptors,
+  // UploadedFile,
+  // UseInterceptors,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -25,12 +25,11 @@ import {
 import {
   DeletePostRequest,
   likeResponse,
-  PostRequest,
   PostResponse,
   PostResponseType,
   UpdatePostRequest,
 } from './post.contract';
-import { FileInterceptor } from '@nestjs/platform-express';
+// import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Post')
@@ -44,11 +43,6 @@ export class PostController {
 
   @ApiBearerAuth()
   @Post()
-  @UseInterceptors(
-    FileInterceptor('media_file', {
-      limits: { fileSize: 5 * 1024 * 1024 },
-    }),
-  )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Create Post' })
   @ApiBody({
@@ -66,17 +60,36 @@ export class PostController {
   @ApiResponse({ type: PostResponse })
   @UseGuards(JwtAuthGuard)
   async createPost(
-    @Body() body: PostRequest,
     @Request() req,
-    @UploadedFile() file: Express.Multer.File,
   ): Promise<{ message: string; results: PostResponse }> {
+    const {
+      content,
+      media_file_buffer,
+      media_file_mimetype,
+      media_file_originalname,
+    } = req.body;
+    console.log('DEBUG body:', req.body);
+
+    const file: Express.Multer.File = {
+      buffer: media_file_buffer,
+      mimetype: media_file_mimetype,
+      originalname: media_file_originalname,
+      size: media_file_buffer.length,
+      fieldname: 'media_file',
+      destination: '', // opsional
+      encoding: '7bit',
+      filename: '', // opsional
+      path: '', // opsional
+      stream: null, // opsional
+    };
+
     const response = await this.postService.createPost({
-      ...body,
+      content,
       user_id: req?.user?.user_id,
       media_file: file,
     });
     return {
-      message: 'Success create user',
+      message: 'Success create post',
       results: response,
     };
   }

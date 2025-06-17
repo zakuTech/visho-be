@@ -1,36 +1,29 @@
 import {
   Controller,
   Post,
-  Get,
   Body,
-  UseInterceptors,
+  Get,
   Request,
   UseGuards,
   UploadedFiles,
+  Patch,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
+  ApiTags,
   ApiOperation,
   ApiBody,
   ApiResponse,
-  ApiTags,
-  ApiConsumes,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import {
   RegisterRequest,
   RegisterResponse,
   UserResponse,
-  UploadPhotoAndBioRequest,
+  editRequest,
 } from './user.contract';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
-interface RequestWithUser {
-  user: {
-    user_id: string;
-  };
-}
 @Controller('user')
 @ApiTags('User')
 export class UserController {
@@ -69,12 +62,11 @@ export class UserController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req: RequestWithUser): Promise<UserResponse> {
+  async getProfile(@Request() req: any): Promise<UserResponse> {
     return await this.userService.getUser(req?.user?.user_id);
   }
-
   @ApiBearerAuth()
-  @Post('upload-bio-photo')
+  @Patch()
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -103,10 +95,10 @@ export class UserController {
   async uploadPhotoAndBio(
     @UploadedFiles()
     files: { profile?: Express.Multer.File[]; cover?: Express.Multer.File[] },
-    @Body() body: UploadPhotoAndBioRequest,
+    @Body() body: editRequest,
     @Request() req, // req.user.user_id dari JWT
   ): Promise<{ message: string; results: UserResponse }> {
-    const response = await this.userService.uploadPhotoAndBio(
+    const response = await this.userService.edit(
       {
         user_id: req.user.user_id,
         username: req.user.username,
@@ -116,7 +108,7 @@ export class UserController {
     );
 
     return {
-      message: 'Success upload photo profile or bio or cover profile',
+      message: 'Success edit profile',
       results: response,
     };
   }

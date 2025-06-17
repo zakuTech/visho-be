@@ -1,21 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional } from 'class-validator';
 
 export class RegisterRequest {
   @ApiProperty()
-  @IsNotEmpty()
   email: string;
 
   @ApiProperty()
-  @IsNotEmpty()
   password: string;
 
   @ApiPropertyOptional()
-  @IsOptional()
   username: string;
 
   @ApiPropertyOptional()
-  @IsOptional()
   profile_picture?: string;
 }
 
@@ -38,7 +33,7 @@ export class UserResponse {
   bio?: string;
 }
 
-export class UploadPhotoAndBioRequest {
+export class editRequest {
   user_id: string;
   username: string;
   photo_profile?: string;

@@ -34,6 +34,19 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+<!-- NSFW2 python -->
+
+1. python --version
+2. install pip
+3. python -m venv venv
+   pip install -r requirements.txt
+
+4. kalau pakai CMD
+
+- venv\Scripts\activate
+
+4. pip install -r openNSFW2/requirements.txt
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
