@@ -232,12 +232,16 @@ export class NsfwMiddleware implements NestMiddleware {
 
       let output: NsfwOutput;
       try {
-        output = JSON.parse(result.stdout);
+        const lines = result.stdout.trim().split('\n');
+        const jsonLine = lines
+          .reverse()
+          .find((line) => line.trim().startsWith('{'));
+        output = JSON.parse(jsonLine);
       } catch (parseError) {
         console.error('JSON parse error:', parseError);
         return res.status(500).json({
           success: false,
-          message: 'Gagal memproses respons dari skrip NSFW.',
+          message: 'Gagal membaca hasil dari pengecekan konten NSFW.',
           raw: result.stdout,
         });
       }

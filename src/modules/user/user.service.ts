@@ -103,64 +103,75 @@ export class UserService {
       throw new BadRequestException('User not found');
     }
 
+    // Default to existing values
     let photoProfileUrl = user.photo_profile;
-    let coverProfileUrl = user.cover_profile;
     let photoProfilePath = user.photo_profile_path;
+    let coverProfileUrl = user.cover_profile;
     let coverProfilePath = user.cover_profile_path;
 
+    // Handle profile picture upload
     if (files?.profile?.[0]) {
       const file = files.profile[0];
-      const sanitizedFileName = sanitizeFileName(file.originalname);
-      const filename = `${Date.now()}-${sanitizedFileName}`;
-      const profilePath = `test/profiles/${filename}`;
+      const sanitizedName = sanitizeFileName(file.originalname);
+      const filename = `${Date.now()}-${sanitizedName}`;
+      const storagePath = `test/profiles/${filename}`;
 
-      // Hapus file lama jika ada
-      if (user.photo_profile_path) {
+      // Delete old profile file if exists
+      if (photoProfilePath) {
         await this.supabaseService.deleteFile(
           process.env.SUPABASE_BUCKET_NAME,
-          user.photo_profile_path,
+          photoProfilePath,
         );
       }
 
-      if (!req.email || !emailRegex.test(req.email)) {
-        throw new BadRequestException('Invalid email format');
-      }
-
-      if (!req.password || req.password.length < 8) {
-        throw new BadRequestException('Password must be at least 8 characters');
-      }
-
-      const existingUser = await this.prisma.users.findFirst({
-        where: {
-          OR: [{ username: req.username }, { email: req.email }],
-        },
-      });
-      if (existingUser) {
-        throw new BadRequestException('Username already exists');
-      }
-      const hashedPassword = await bcrypt.hash(req.password, 10);
-      const newUser = await this.prisma.users.create({
-        data: {
-          user_id: uuidv4(),
-          username: req.username,
-          email: req.email,
-          password: hashedPassword,
-        },
-      });
-      return newUser;
-    } catch (error) {
-      this.logger.error(
-        `Failed to register user: ${error.message}`,
-        error.stack,
+      // Upload new file
+      await this.supabaseService.uploadFile(
+        process.env.SUPABASE_BUCKET_NAME,
+        storagePath,
+        file.buffer,
+        file.mimetype,
       );
-      throw new HttpException('Failed to register user', error.status || 500);
-    }
-  }
 
+      photoProfileUrl = await this.supabaseService.getPublicUrl(
+        process.env.SUPABASE_BUCKET_NAME,
+        storagePath,
+      );
+      photoProfilePath = storagePath;
+    }
+
+    // Handle cover picture upload
+    if (files?.cover?.[0]) {
+      const file = files.cover[0];
+      const sanitizedName = sanitizeFileName(file.originalname);
+      const filename = `${Date.now()}-${sanitizedName}`;
+      const storagePath = `test/cover/${filename}`;
+
+      // Delete old cover file if exists
+      if (coverProfilePath) {
+        await this.supabaseService.deleteFile(
+          process.env.SUPABASE_BUCKET_NAME,
+          coverProfilePath,
+        );
+      }
+
+      // Upload new file
+      await this.supabaseService.uploadFile(
+        process.env.SUPABASE_BUCKET_NAME,
+        storagePath,
+        file.buffer,
+        file.mimetype,
+      );
+
+      coverProfileUrl = await this.supabaseService.getPublicUrl(
+        process.env.SUPABASE_BUCKET_NAME,
+        storagePath,
+      );
+      coverProfilePath = storagePath;
+    }
+
+    // Update user data
     const updatedUser = await this.prisma.users.update({
-      where: {
-        user_id: user.user_id,
-      },
+      where: { user_id: user.user_id },
       data: {
         username: req.username ?? user.username,
         bio: req.bio ?? user.bio,
@@ -171,9 +182,7 @@ export class UserService {
       },
     });
 
-    this.logger.info(
-      `Profile atau bio berhasil diperbarui: ${updatedUser.user_id}`,
-    );
+    this.logger.info(`Berhasil memperbarui user: ${updatedUser.user_id}`);
 
     return updatedUser;
   }
