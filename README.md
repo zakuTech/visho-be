@@ -43,6 +43,8 @@ $ npm run test:cov
 - venv\Scripts\activate
 
 4. install depedency (pip install tensorflow tensorflow-hub pillow numpy)
+5. pip install -r openNSFW2/requirements.txt
+6. pip install tensorflow==2.13.0 keras==2.13.1 opennsfw2 opencv-python
 
 ## Deployment
 
