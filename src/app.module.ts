@@ -1,9 +1,4 @@
-import {
-  Module,
-  NestModule,
-  MiddlewareConsumer,
-  RequestMethod,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -15,7 +10,6 @@ import { PostModule } from './modules/post/post.module';
 import { LikeModule } from './modules/like/like.module';
 import { SupabaseModule } from './modules/supabase/supabase.module';
 import { CommonModule } from './common/common.module';
-import { NsfwMiddleware } from './middlewares/nsfw.middleware';
 
 @Module({
   imports: [
@@ -33,10 +27,4 @@ import { NsfwMiddleware } from './middlewares/nsfw.middleware';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(NsfwMiddleware)
-      .forRoutes({ path: 'post', method: RequestMethod.ALL }); // Sesuaikan route
-  }
-}
+export class AppModule {}
