@@ -34,18 +34,6 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
-<!-- nudenet python -->
-
-1. python --version
-2. install pip
-3. kalau pakai CMD
-
-- venv\Scripts\activate
-
-4. install depedency (pip install tensorflow tensorflow-hub pillow numpy)
-5. pip install -r openNSFW2/requirements.txt
-6. pip install tensorflow==2.13.0 keras==2.13.1 opennsfw2 opencv-python
-
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
