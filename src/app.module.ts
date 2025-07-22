@@ -15,7 +15,6 @@ import { PostModule } from './modules/post/post.module';
 import { LikeModule } from './modules/like/like.module';
 import { SupabaseModule } from './modules/supabase/supabase.module';
 import { CommonModule } from './common/common.module';
-import { NsfwMiddleware } from './middlewares/nsfw.middleware';
 
 @Module({
   imports: [
@@ -34,9 +33,5 @@ import { NsfwMiddleware } from './middlewares/nsfw.middleware';
   providers: [AppService],
 })
 export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(NsfwMiddleware)
-      .forRoutes({ path: 'post', method: RequestMethod.ALL }); // Sesuaikan route
-  }
+  configure(consumer: MiddlewareConsumer) {}
 }
