@@ -21,6 +21,17 @@ export class FollowService {
     this.logger.info(`CREATE FOLLOW WITH USER ID ${req.user_id || '-'}`);
 
     try {
+      const isAlreadyFollowing = await this.prisma.followers.findFirst({
+        where: {
+          user_id: req.user_id,
+          follower_user_id: req.follower_user_id,
+        },
+      });
+
+      if (isAlreadyFollowing) {
+        throw new HttpException('You are already following this user', 400);
+      }
+
       const result = await this.prisma.followers.create({
         data: {
           follower_id: uuidv4(),
@@ -49,7 +60,7 @@ export class FollowService {
     try {
       const data = await this.prisma.followers.findFirst({
         where: {
-          follower_id: params.follower_id,
+          user_id: params.user_id,
           follower_user_id: params.follower_user_id,
         },
       });

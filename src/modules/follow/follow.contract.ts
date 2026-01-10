@@ -17,9 +17,9 @@ export class FollowCreateResponse {
 }
 
 export class FollowDeleteRequest {
-  @ApiPropertyOptional()
-  @IsOptional()
-  follower_id?: string;
+  @ApiProperty()
+  @IsNotEmpty()
+  user_id?: string;
 
   @ApiProperty()
   @IsNotEmpty()

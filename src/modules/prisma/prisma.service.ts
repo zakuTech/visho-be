@@ -10,10 +10,7 @@ import { Logger } from 'winston';
 
 @Injectable()
 export class PrismaService
-  extends PrismaClient<
-    Prisma.PrismaClientOptions,
-    'query' | 'info' | 'warn' | 'error'
-  >
+  extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
   private logger: Logger;
@@ -25,17 +22,7 @@ export class PrismaService
     this.logger = logger;
   }
 
-  onModuleInit(): void {
-    this.$on('info', (e) => {
-      this.logger.info(JSON.stringify(e));
-    });
-    this.$on('error', (e) => {
-      this.logger.error(JSON.stringify(e));
-    });
-    this.$on('query', (e) => {
-      this.logger.info(JSON.stringify(e));
-    });
-  }
+  onModuleInit(): void {}
 
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();

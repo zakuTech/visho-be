@@ -85,7 +85,7 @@ export class FollowController {
   ): Promise<FollowDeleteResponse> {
     try {
       const deleteLike = await this.followService.deleteFollow({
-        follower_id: req?.user?.user_id,
+        user_id: body.user_id,
         follower_user_id: body.follower_user_id,
       });
 

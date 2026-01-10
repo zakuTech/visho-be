@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Inject,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -14,6 +15,11 @@ import { randomInt } from 'crypto';
 import { addMinutes, isAfter } from 'date-fns';
 import { MailService } from '../mail/mail.service';
 
+const OTP_EXPIRY_MINUTES = 5;
+const OTP_MIN = 100000;
+const OTP_MAX = 999999;
+const BCRYPT_ROUNDS = 12;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -24,206 +30,240 @@ export class AuthService {
   ) {}
 
   async login(req: LoginRequest): Promise<LoginResponse> {
-    try {
-      this.logger.info(`START LOGIN WITH EMAIL ${req.email}`);
-      const user = await this.prisma.users.findFirst({
-        where: { email: req.email },
-      });
-      if (!user) {
-        throw new BadRequestException('User not found');
-      }
+    this.logger.info(`Login attempt for email: ${req.email}`);
 
-      const isPasswordValid = await bcrypt.compare(req.password, user.password);
-      if (!isPasswordValid) {
-        throw new BadRequestException('Invalid password');
-      }
+    const user = await this.findUserByEmail(req.email);
+    await this.validatePassword(req.password, user.password);
 
-      const token = this.jwtService.sign(
-        {
-          user_id: user.user_id,
-          username: user.username,
-        },
-        {
-          secret: process.env.JWT_SECRET,
-        },
-      );
+    const token = this.generateToken(user.user_id, user.username);
 
-      await this.prisma.users.update({
-        where: { user_id: user.user_id },
-        data: { token: token },
-      });
-
-      return { message: 'Success Login', access_token: token };
-    } catch (error) {
-      this.logger.error(`LOGIN FAILED: ${error.message}`, error.stack);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Internal server error');
-    }
-  }
-  async logout(userId: string) {
-    try {
-      await this.prisma.users.update({
-        where: { user_id: userId },
-        data: { token: null },
-      });
-      return { message: 'Logout Success' };
-    } catch (error) {
-      this.logger.error(`LOGOUT FAILED: ${error.message}`, error.stack);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Internal server error');
-    }
+    return {
+      message: 'Login successful',
+      access_token: token,
+    };
   }
 
-  async sendOtp(email: string, verifyType: EVerifyType) {
-    try {
-      const otpCode = randomInt(100000, 999999).toString();
-      const expiresAt = addMinutes(new Date(), 5);
+  async logout(userId: string): Promise<{ message: string }> {
+    this.logger.info(`User ${userId} logged out`);
+    return { message: 'Logout successful' };
+  }
 
-      await this.prisma.userOtps.deleteMany({
-        where: { email, verified: false },
-      });
+  async sendOtp(
+    email: string,
+    verifyType: EVerifyType,
+  ): Promise<{ message: string }> {
+    const otpCode = this.generateOtpCode();
+    const expiresAt = addMinutes(new Date(), OTP_EXPIRY_MINUTES);
 
-      await this.prisma.userOtps.create({
-        data: {
-          email,
-          otp_code: otpCode,
-          expires_at: expiresAt,
-          verified: false,
-        },
-      });
+    await this.cleanupUnverifiedOtps(email);
+    await this.createOtpRecord(email, otpCode, expiresAt);
+    await this.sendOtpEmail(email, otpCode, verifyType);
 
-      await this.mailService.sendMail(
+    this.logger.info(`OTP sent to ${email} for ${verifyType}`);
+
+    return { message: 'OTP sent successfully to your email' };
+  }
+
+  async verifyOtp(
+    email: string,
+    otpCode: string,
+  ): Promise<{ message: string }> {
+    const otpRecord = await this.findUnverifiedOtp(email, otpCode);
+
+    if (isAfter(new Date(), otpRecord.expires_at)) {
+      throw new BadRequestException('OTP has expired');
+    }
+
+    await this.markOtpAsVerified(otpRecord.otp_id);
+
+    this.logger.info(`OTP verified for ${email}`);
+    return { message: 'OTP verified successfully' };
+  }
+
+  async changeEmail(
+    userId: string,
+    newEmail: string,
+    otpCode: string,
+  ): Promise<{ message: string }> {
+    const user = await this.findUserById(userId);
+
+    await this.verifyOtp(user.email, otpCode);
+    await this.ensureEmailNotTaken(newEmail);
+
+    await this.updateUserEmail(userId, newEmail);
+
+    this.logger.info(`Email changed for user ${userId}`);
+    return { message: 'Email changed successfully' };
+  }
+
+  async changePassword(
+    email: string,
+    newPassword: string,
+    otpCode: string,
+  ): Promise<{ message: string }> {
+    const user = await this.findUserByEmail(email);
+
+    await this.verifyOtp(email, otpCode);
+    await this.ensurePasswordIsDifferent(newPassword, user.password);
+
+    const hashedPassword = await this.hashPassword(newPassword);
+    await this.updateUserPassword(user.user_id, hashedPassword);
+
+    this.logger.info(`Password changed for user ${user.user_id}`);
+    return { message: 'Password changed successfully' };
+  }
+
+  private async findUserByEmail(email: string) {
+    const user = await this.prisma.users.findFirst({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return user;
+  }
+
+  private async findUserById(userId: string) {
+    const user = await this.prisma.users.findFirst({
+      where: { user_id: userId },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return user;
+  }
+
+  private async validatePassword(
+    plainPassword: string,
+    hashedPassword: string,
+  ): Promise<void> {
+    const isValid = await bcrypt.compare(plainPassword, hashedPassword);
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+  }
+
+  private generateToken(userId: string, username: string): string {
+    return this.jwtService.sign({
+      user_id: userId,
+      username: username,
+    });
+  }
+
+  private generateOtpCode(): string {
+    return randomInt(OTP_MIN, OTP_MAX).toString();
+  }
+
+  private async cleanupUnverifiedOtps(email: string): Promise<void> {
+    await this.prisma.userOtps.deleteMany({
+      where: { email, verified: false },
+    });
+  }
+
+  private async createOtpRecord(
+    email: string,
+    otpCode: string,
+    expiresAt: Date,
+  ): Promise<void> {
+    await this.prisma.userOtps.create({
+      data: {
         email,
-        `Verify to continue change your ${verifyType === EVerifyType.CHANGE_EMAIL ? 'email' : 'password'} `,
-        `Your OTP is: ${otpCode}`,
+        otp_code: otpCode,
+        expires_at: expiresAt,
+        verified: false,
+      },
+    });
+  }
+
+  private async sendOtpEmail(
+    email: string,
+    otpCode: string,
+    verifyType: EVerifyType,
+  ): Promise<void> {
+    const subject =
+      verifyType === EVerifyType.CHANGE_EMAIL
+        ? 'Verify Email Change'
+        : 'Verify Password Change';
+
+    await this.mailService.sendMail(
+      email,
+      subject,
+      `Your verification code is: ${otpCode}. Valid for ${OTP_EXPIRY_MINUTES} minutes.`,
+    );
+  }
+
+  private async findUnverifiedOtp(email: string, otpCode: string) {
+    const otpRecord = await this.prisma.userOtps.findFirst({
+      where: {
+        email,
+        otp_code: otpCode,
+        verified: false,
+      },
+      orderBy: {
+        expires_at: 'desc',
+      },
+    });
+
+    if (!otpRecord) {
+      throw new BadRequestException('Invalid or expired OTP');
+    }
+
+    return otpRecord;
+  }
+
+  private async markOtpAsVerified(otpId: string): Promise<void> {
+    await this.prisma.userOtps.update({
+      where: { otp_id: otpId },
+      data: { verified: true },
+    });
+  }
+
+  private async ensureEmailNotTaken(email: string): Promise<void> {
+    const existingUser = await this.prisma.users.findFirst({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('Email is already in use');
+    }
+  }
+
+  private async ensurePasswordIsDifferent(
+    newPassword: string,
+    currentHashedPassword: string,
+  ): Promise<void> {
+    const isSame = await bcrypt.compare(newPassword, currentHashedPassword);
+
+    if (isSame) {
+      throw new BadRequestException(
+        'New password must be different from current password',
       );
-      return { message: 'OTP sent successfully', otp: otpCode };
-    } catch (error) {
-      this.logger.error(`OTP FAILED: ${error.message}`, error.stack);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Internal server error');
     }
   }
 
-  async getOtp(email: string) {
-    try {
-      const otpRecord = await this.prisma.userOtps.findFirst({
-        where: {
-          email,
-          verified: false,
-        },
-        orderBy: {
-          expires_at: 'desc',
-        },
-      });
-
-      if (!otpRecord) throw new BadRequestException('OTP not found');
-      return { otp: otpRecord.otp_code };
-    } catch (error) {
-      this.logger.error(`OTP FAILED: ${error.message}`, error.stack);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Internal server error');
-    }
+  private async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, BCRYPT_ROUNDS);
   }
 
-  async verifyOtp(email: string, otpCode: string) {
-    try {
-      const otpRecord = await this.prisma.userOtps.findFirst({
-        where: {
-          email,
-          otp_code: otpCode,
-          verified: false,
-        },
-      });
-
-      if (!otpRecord) throw new BadRequestException('Invalid OTP');
-      if (isAfter(new Date(), otpRecord.expires_at)) {
-        throw new BadRequestException('OTP expired');
-      }
-
-      await this.prisma.userOtps.update({
-        where: { otp_id: otpRecord.otp_id },
-        data: { verified: true },
-      });
-
-      return { message: 'OTP verified successfully' };
-    } catch (error) {
-      this.logger.error(`VERIFY OTP FAILED: ${error.message}`, error.stack);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Internal server error');
-    }
+  private async updateUserEmail(userId: string, email: string): Promise<void> {
+    await this.prisma.users.update({
+      where: { user_id: userId },
+      data: { email },
+    });
   }
 
-  async changeEmail(userId: string, email: string) {
-    try {
-      const user = await this.prisma.users.findFirst({
-        where: { user_id: userId },
-      });
-
-      if (!user) throw new BadRequestException('User not found');
-
-      const isEmailAlreadyUsed = await this.prisma.users.findFirst({
-        where: { email },
-      });
-
-      if (isEmailAlreadyUsed)
-        throw new BadRequestException('Email already used');
-
-      await this.prisma.users.update({
-        where: { user_id: userId },
-        data: { email },
-      });
-
-      return { message: 'Change Email Success' };
-    } catch (error) {
-      this.logger.error(`CHANGE EMAIL FAILED: ${error.message}`, error.stack);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Internal server error');
-    }
-  }
-
-  async changePassword(email: string, password: string) {
-    try {
-      const user = await this.prisma.users.findFirst({
-        where: { email },
-      });
-
-      if (!user) throw new BadRequestException('User not found');
-
-      const isMatch = await bcrypt.compare(password, user.password);
-
-      if (isMatch)
-        throw new BadRequestException('Password cannot same as old password');
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      await this.prisma.users.update({
-        where: { user_id: user.user_id },
-        data: { password: hashedPassword },
-      });
-
-      return { message: 'Change Password Success' };
-    } catch (error) {
-      this.logger.error(
-        `CHANGE PASSWORD FAILED: ${error.message}`,
-        error.stack,
-      );
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Internal server error');
-    }
+  private async updateUserPassword(
+    userId: string,
+    hashedPassword: string,
+  ): Promise<void> {
+    await this.prisma.users.update({
+      where: { user_id: userId },
+      data: { password: hashedPassword },
+    });
   }
 }

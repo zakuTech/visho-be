@@ -75,7 +75,10 @@ export class UserService {
         `Failed to register user: ${error.message}`,
         error.stack,
       );
-      throw new HttpException('Failed to register user', error.status || 500);
+      throw new HttpException(
+        `Failed to register user ${error.message}`,
+        error.status || 500,
+      );
     }
   }
 
