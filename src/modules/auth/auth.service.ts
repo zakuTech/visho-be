@@ -87,7 +87,7 @@ export class AuthService {
   ): Promise<{ message: string }> {
     const user = await this.findUserById(userId);
 
-    await this.verifyOtp(user.email, otpCode);
+    await this.findVerifiedOtp(user.email, otpCode);
     await this.ensureEmailNotTaken(newEmail);
 
     await this.updateUserEmail(userId, newEmail);
@@ -103,7 +103,7 @@ export class AuthService {
   ): Promise<{ message: string }> {
     const user = await this.findUserByEmail(email);
 
-    await this.verifyOtp(email, otpCode);
+    await this.findVerifiedOtp(email, otpCode);
     await this.ensurePasswordIsDifferent(newPassword, user.password);
 
     const hashedPassword = await this.hashPassword(newPassword);
@@ -211,6 +211,25 @@ export class AuthService {
 
     if (!otpRecord) {
       throw new BadRequestException('Invalid or expired OTP');
+    }
+
+    return otpRecord;
+  }
+
+  private async findVerifiedOtp(email: string, otpCode: string) {
+    const otpRecord = await this.prisma.userOtps.findFirst({
+      where: {
+        email,
+        otp_code: otpCode,
+        verified: true,
+      },
+      orderBy: {
+        expires_at: 'desc',
+      },
+    });
+
+    if (!otpRecord) {
+      throw new BadRequestException('Verified OTP not found');
     }
 
     return otpRecord;

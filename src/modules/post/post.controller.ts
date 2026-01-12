@@ -59,7 +59,7 @@ export class PostController {
   })
   @ApiResponse({ type: PostResponse })
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('media_file')) // nama field di form
+  @UseInterceptors(FileInterceptor('media_file'))
   async createPost(
     @Request() req,
     @UploadedFile() file: Express.Multer.File,

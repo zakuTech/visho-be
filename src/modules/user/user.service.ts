@@ -8,10 +8,9 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { editRequest, UserResponse } from './user.contract';
-import { SupabaseService } from '../supabase/supabase.service';
-import { sanitizeFileName } from 'src/media/media.controller';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import { IStorageService } from '../storage/storage.interface';
 
 interface RegisterRequest {
   username: string;
@@ -27,7 +26,8 @@ export class UserService {
   constructor(
     prisma: PrismaService,
     logger: Logger,
-    private readonly supabaseService: SupabaseService,
+    @Inject('IStorageService')
+    private readonly storageService: IStorageService,
   ) {
     this.prisma = prisma;
     this.logger = logger;
@@ -106,66 +106,59 @@ export class UserService {
       throw new BadRequestException('User not found');
     }
 
-    // Default to existing values
     let photoProfileUrl = user.photo_profile;
     let photoProfilePath = user.photo_profile_path;
     let coverProfileUrl = user.cover_profile;
     let coverProfilePath = user.cover_profile_path;
 
-    // Handle profile picture upload
     if (files?.profile?.[0]) {
       const file = files.profile[0];
-      const sanitizedName = sanitizeFileName(file.originalname);
+      const sanitizedName = this.sanitizeFileName(file.originalname);
       const filename = `${Date.now()}-${sanitizedName}`;
       const storagePath = `test/profiles/${filename}`;
 
-      // Delete old profile file if exists
       if (photoProfilePath) {
-        await this.supabaseService.deleteFile(
+        await this.storageService.deleteFile(
           process.env.SUPABASE_BUCKET_NAME,
           photoProfilePath,
         );
       }
 
-      // Upload new file
-      await this.supabaseService.uploadFile(
+      await this.storageService.uploadFile(
         process.env.SUPABASE_BUCKET_NAME,
         storagePath,
         file.buffer,
         file.mimetype,
       );
 
-      photoProfileUrl = await this.supabaseService.getPublicUrl(
+      photoProfileUrl = await this.storageService.getPublicUrl(
         process.env.SUPABASE_BUCKET_NAME,
         storagePath,
       );
       photoProfilePath = storagePath;
     }
 
-    // Handle cover picture upload
     if (files?.cover?.[0]) {
       const file = files.cover[0];
-      const sanitizedName = sanitizeFileName(file.originalname);
+      const sanitizedName = this.sanitizeFileName(file.originalname);
       const filename = `${Date.now()}-${sanitizedName}`;
       const storagePath = `test/cover/${filename}`;
 
-      // Delete old cover file if exists
       if (coverProfilePath) {
-        await this.supabaseService.deleteFile(
+        await this.storageService.deleteFile(
           process.env.SUPABASE_BUCKET_NAME,
           coverProfilePath,
         );
       }
 
-      // Upload new file
-      await this.supabaseService.uploadFile(
+      await this.storageService.uploadFile(
         process.env.SUPABASE_BUCKET_NAME,
         storagePath,
         file.buffer,
         file.mimetype,
       );
 
-      coverProfileUrl = await this.supabaseService.getPublicUrl(
+      coverProfileUrl = await this.storageService.getPublicUrl(
         process.env.SUPABASE_BUCKET_NAME,
         storagePath,
       );
@@ -188,5 +181,12 @@ export class UserService {
     this.logger.info(`Berhasil memperbarui user: ${updatedUser.user_id}`);
 
     return updatedUser;
+  }
+
+  private sanitizeFileName(fileName: string): string {
+    return fileName
+      .toLowerCase()
+      .replace(/[^a-z0-9.-]/g, '-')
+      .replace(/\s+/g, '_');
   }
 }

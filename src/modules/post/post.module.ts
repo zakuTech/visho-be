@@ -4,9 +4,9 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { PostController } from './post.controller';
 import { LoggerModule } from 'src/common/logger.module';
-import { SupabaseModule } from '../supabase/supabase.module';
+import { StorageModule } from '../storage/storage.module';
 @Module({
-  imports: [PrismaModule, LoggerModule, SupabaseModule],
+  imports: [PrismaModule, LoggerModule, StorageModule],
   controllers: [PostController],
   providers: [PostService, PrismaService],
   exports: [PostService, PrismaService],

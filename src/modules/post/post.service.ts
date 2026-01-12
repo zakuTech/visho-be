@@ -16,9 +16,8 @@ import {
   PostRequest,
   likeResponse,
 } from './post.contract';
-import { SupabaseService } from '../supabase/supabase.service';
-import { sanitizeFileName } from 'src/media/media.controller';
 import * as fs from 'fs';
+import { IStorageService } from '../storage/storage.interface';
 
 @Injectable()
 export class PostService {
@@ -30,7 +29,8 @@ export class PostService {
     prisma: PrismaService,
     logger: Logger,
     validationService: ValidationService,
-    private readonly supabaseService: SupabaseService,
+    @Inject('IStorageService')
+    private readonly storageService: IStorageService,
   ) {
     this.prisma = prisma;
     this.logger = logger;
@@ -52,22 +52,22 @@ export class PostService {
         const buffer = req.media_file.buffer;
         const mimetype = req.media_file.mimetype;
         const originalname = req.media_file.originalname;
-        const sanitizedFileName = sanitizeFileName(originalname);
+        const sanitizedFileName = this.sanitizeFileName(originalname);
         const filename = `${Date.now()}-${sanitizedFileName}`;
         mediaPath = `test/posts/${filename}`;
 
-        console.log('Uploading to Supabase...', { mediaPath });
+        this.logger.info('Uploading to Supabase...', { mediaPath });
 
-        await this.supabaseService.uploadFile(
+        await this.storageService.uploadFile(
           process.env.SUPABASE_BUCKET_NAME,
           mediaPath,
           buffer,
           mimetype,
         );
 
-        console.log('Upload done, getting public URL...');
+        this.logger.info('Upload done, getting public URL...');
 
-        mediaUrl = await this.supabaseService.getPublicUrl(
+        mediaUrl = await this.storageService.getPublicUrl(
           process.env.SUPABASE_BUCKET_NAME,
           mediaPath,
         );
@@ -228,7 +228,7 @@ export class PostService {
       await this.prisma.posts.delete({
         where: { post_id: params.post_id, user_id: params.user_id },
       });
-      await this.supabaseService.deleteFile(
+      await this.storageService.deleteFile(
         process.env.SUPABASE_BUCKET_NAME,
         params.media_path,
       );
@@ -238,5 +238,12 @@ export class PostService {
       this.logger.error(`Failed to delete post: ${error.message}`, error.stack);
       throw new HttpException('Failed to delete post', error.status || 500);
     }
+  }
+
+  private sanitizeFileName(fileName: string): string {
+    return fileName
+      .toLowerCase()
+      .replace(/[^a-z0-9.-]/g, '-')
+      .replace(/\s+/g, '_');
   }
 }
