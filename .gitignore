@@ -403,3 +403,5 @@ dist
 .webpack
 .serverless/**/*.zip
 venv/
+
+storage/
