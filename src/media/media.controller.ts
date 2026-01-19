@@ -18,7 +18,6 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { Express } from 'express';
-
 export function sanitizeFileName(fileName: string): string {
   return fileName
     .toLowerCase()

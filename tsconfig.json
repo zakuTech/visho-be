@@ -12,9 +12,10 @@
     "baseUrl": "./",
     "incremental": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
-    // "moduleResolution": "node",
-    // "esModuleInterop": true,
-    // "types": []
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "types": ["node", "express", "multer"]
+    // "typeRoots": ["./node_modules/@types", "./src/types"]
   }
 }
