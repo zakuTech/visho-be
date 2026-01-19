@@ -17,14 +17,18 @@ export class FollowService {
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
 
-  async createFollow(req: FollowCreateRequest): Promise<FollowCreateResponse> {
-    this.logger.info(`CREATE FOLLOW WITH USER ID ${req.user_id || '-'}`);
+  async createFollow(params: {
+    following_user_id: string;
+    follower_user_id: string;
+  }): Promise<FollowCreateResponse> {
+    const { following_user_id, follower_user_id } = params;
+    this.logger.info(`CREATE FOLLOW WITH USER ID ${following_user_id || '-'}`);
 
     try {
       const isAlreadyFollowing = await this.prisma.followers.findFirst({
         where: {
-          user_id: req.user_id,
-          follower_user_id: req.follower_user_id,
+          user_id: following_user_id,
+          follower_user_id,
         },
       });
 
@@ -35,13 +39,13 @@ export class FollowService {
       const result = await this.prisma.followers.create({
         data: {
           follower_id: uuidv4(),
-          user_id: req.user_id,
-          follower_user_id: req.follower_user_id,
+          user_id: following_user_id,
+          follower_user_id: follower_user_id,
         },
       });
 
       return {
-        message: 'Success: Follow created',
+        following_id: result.user_id,
         follower_id: result.follower_id,
       };
     } catch (error) {
@@ -50,19 +54,16 @@ export class FollowService {
     }
   }
 
-  async deleteFollow(
-    params: FollowDeleteRequest,
-  ): Promise<FollowDeleteResponse> {
-    this.logger.info(
-      `DELETE FOLLOW WITH USER ID ${params.follower_user_id || '-'}`,
-    );
+  async deleteFollow(params: {
+    following_user_id: string;
+    follower_user_id: string;
+  }): Promise<FollowDeleteResponse> {
+    const { following_user_id, follower_user_id } = params;
+    this.logger.info(`DELETE FOLLOW WITH USER ID ${follower_user_id || '-'}`);
 
     try {
       const data = await this.prisma.followers.findFirst({
-        where: {
-          user_id: params.user_id,
-          follower_user_id: params.follower_user_id,
-        },
+        where: { user_id: following_user_id, follower_user_id },
       });
 
       if (!data) {

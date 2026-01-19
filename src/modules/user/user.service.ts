@@ -7,7 +7,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
-import { editRequest, UserResponse } from './user.contract';
+import { EditRequest, UserResponse } from './user.contract';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 import { IStorageService } from '../storage/storage.interface';
@@ -84,22 +84,48 @@ export class UserService {
 
   async getUser(userId: string): Promise<UserResponse | null> {
     const user = await this.prisma.users.findUnique({
+      select: {
+        user_id: true,
+        username: true,
+        email: true,
+        photo_profile: true,
+        bio: true,
+        cover_profile: true,
+      },
       where: { user_id: userId },
     });
+
     if (!user) {
       throw new BadRequestException('User not found');
     }
-    return user;
+
+    const following = await this.prisma.followers.count({
+      where: {
+        follower_user_id: userId,
+      },
+    });
+    const follower = await this.prisma.followers.count({
+      where: {
+        user_id: userId,
+      },
+    });
+    const result = {
+      ...user,
+      follower,
+      following,
+    };
+    return result;
   }
 
   async edit(
-    req: editRequest,
+    user_id: string,
+    req: EditRequest,
     files: { profile?: Express.Multer.File[]; cover?: Express.Multer.File[] },
   ): Promise<UserResponse> {
     this.logger.info(`Update photo or bio request: ${JSON.stringify(req)}`);
 
     const user = await this.prisma.users.findUnique({
-      where: { user_id: req.user_id },
+      where: { user_id },
     });
 
     if (!user) {
@@ -165,7 +191,6 @@ export class UserService {
       coverProfilePath = storagePath;
     }
 
-    // Update user data
     const updatedUser = await this.prisma.users.update({
       where: { user_id: user.user_id },
       data: {

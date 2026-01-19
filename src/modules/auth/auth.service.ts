@@ -2,7 +2,6 @@ import {
   Injectable,
   BadRequestException,
   Inject,
-  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -38,7 +37,6 @@ export class AuthService {
     const token = this.generateToken(user.user_id, user.username);
 
     return {
-      message: 'Login successful',
       access_token: token,
     };
   }
@@ -52,6 +50,10 @@ export class AuthService {
     email: string,
     verifyType: EVerifyType,
   ): Promise<{ message: string }> {
+    const user = await this.findUserByEmail(email);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
     const otpCode = this.generateOtpCode();
     const expiresAt = addMinutes(new Date(), OTP_EXPIRY_MINUTES);
 

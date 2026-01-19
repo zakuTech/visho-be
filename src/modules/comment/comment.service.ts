@@ -10,6 +10,7 @@ import { Logger } from 'winston';
 import { ValidationService } from '../prisma/validation.service';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { CommentValidation } from './comment.validation';
+import { string } from 'joi';
 
 interface PostCommentRequest {
   user_id: string;
@@ -27,7 +28,6 @@ interface Comment {
 @Injectable()
 export class CommentService {
   private prisma: PrismaService;
-  // @Inject('winston') private readonly logger: WinstonLogger;
   @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger;
   private validationService: ValidationService;
 
@@ -41,22 +41,23 @@ export class CommentService {
     this.validationService = validationService;
   }
 
-  async postComment(req: PostCommentRequest): Promise<Comment> {
+  async postComment(params: PostCommentRequest): Promise<Comment> {
     try {
-      const fadli: PostCommentRequest = this.validationService.validate(
+      const { user_id, post_id, content } = params;
+      const validate: PostCommentRequest = this.validationService.validate(
         CommentValidation.PostComment,
-        req,
+        params,
       ) as PostCommentRequest;
 
       const user = await this.prisma.users.findUnique({
-        where: { user_id: req.user_id },
+        where: { user_id },
       });
       if (!user) {
         throw new HttpException('user not found', 404);
       }
 
       const post = await this.prisma.posts.findUnique({
-        where: { post_id: req.post_id },
+        where: { post_id },
       });
       if (!post) {
         throw new HttpException('posts not found', 404);
@@ -65,9 +66,9 @@ export class CommentService {
       const newComment = await this.prisma.comments.create({
         data: {
           comment_id: uuidv4(),
-          user_id: fadli.user_id,
-          post_id: fadli.post_id,
-          content: fadli.content,
+          user_id: validate.user_id,
+          post_id: validate.post_id,
+          content: validate.content,
         },
       });
       this.logger.info(`comment berhasil dipost ${newComment.comment_id}`);
@@ -81,55 +82,73 @@ export class CommentService {
     }
   }
 
-  async getAllComment(): Promise<Comment[]> {
-    try {
-      const comments = await this.prisma.comments.findMany();
-      if (!comments.length) {
-        throw new BadRequestException('No posts found');
-      }
-
-      return comments;
-    } catch (error) {
-      this.logger.error(
-        `Failed to get all comments: ${error.message}`,
-        error.stack,
-      );
-      throw new HttpException(
-        'Failed to get all comments',
-        error.status || 500,
-      );
+  async getAllComment(params: { user_id: string }): Promise<Comment[]> {
+    const { user_id } = params;
+    this.logger.info(`Get all comments by user id: ${user_id}`);
+    const user = await this.prisma.users.findUnique({
+      where: { user_id },
+    });
+    if (!user) {
+      throw new BadRequestException('User not found');
     }
+    const comments = await this.prisma.comments.findMany({
+      select: {
+        user_id: true,
+        comment_id: true,
+        post_id: true,
+        content: true,
+        post: {
+          select: {
+            post_id: true,
+            user_id: true,
+            media_url: true,
+            content: true,
+          },
+        },
+      },
+      where: { user_id },
+    });
+
+    return comments;
   }
 
-  async getCommentById(comment_id: string): Promise<Comment> {
-    try {
-      const comment = await this.prisma.comments.findFirst({
-        where: { comment_id },
-      });
-      if (!comment) {
-        throw new BadRequestException('comment not found');
-      }
-
-      return comment;
-    } catch (error) {
-      this.logger.error(
-        `Failed to get comment by id: ${error.message}`,
-        error.stack,
-      );
-      throw new HttpException(
-        'Failed to get comment by id',
-        error.status || 500,
-      );
+  async getCommentByPostId(params: { post_id: string }): Promise<Comment[]> {
+    const { post_id } = params;
+    const post = await this.prisma.posts.findUnique({
+      where: { post_id },
+    });
+    if (!post) {
+      throw new BadRequestException('Post not found');
     }
+    const comment = await this.prisma.comments.findMany({
+      select: {
+        user_id: true,
+        comment_id: true,
+        post_id: true,
+        content: true,
+        user: {
+          select: {
+            user_id: true,
+            username: true,
+            photo_profile: true,
+          },
+        },
+      },
+      where: { post_id },
+    });
+
+    return comment;
   }
 
-  async updateComment(
-    comment_id: string,
-    req: Partial<PostCommentRequest>,
-  ): Promise<Comment> {
+  async updateComment(params: {
+    comment_id: string;
+    content: string;
+    post_id: string;
+  }): Promise<Comment> {
     try {
+      const { comment_id, content, post_id } = params;
       const comment = await this.prisma.comments.findFirst({
-        where: { comment_id },
+        where: { comment_id, post_id },
       });
       if (!comment) {
         throw new HttpException('comment not found', 404);
@@ -138,13 +157,10 @@ export class CommentService {
       const updatedComment = await this.prisma.comments.update({
         where: { comment_id },
         data: {
-          content: req.content,
+          content: content,
         },
       });
 
-      this.logger.info(
-        `comment berhasil diupdate ${updatedComment.comment_id}`,
-      );
       return updatedComment;
     } catch (error) {
       this.logger.error(
@@ -155,15 +171,19 @@ export class CommentService {
     }
   }
 
-  async deleteComment(comment_id: string): Promise<{ message: string }> {
+  async deleteComment(params: { comment_id: string }): Promise<null> {
     try {
+      const { comment_id } = params;
       await this.prisma.comments.delete({
         where: { comment_id },
       });
-      return { message: 'Post berhasil dihapus' };
+      return null;
     } catch (error) {
-      this.logger.error(`Failed to delete post: ${error.message}`, error.stack);
-      throw new HttpException('Failed to delete post', error.status || 500);
+      this.logger.error(
+        `Failed to delete Comment: ${error.message}`,
+        error.stack,
+      );
+      throw new HttpException('Failed to delete Comment', error.status || 500);
     }
   }
 }

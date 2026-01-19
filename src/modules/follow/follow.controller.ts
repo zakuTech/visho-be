@@ -11,19 +11,14 @@ import {
 } from '@nestjs/common';
 import { FollowService } from './follow.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBody,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import {
   FollowCreateRequest,
   FollowCreateResponse,
   FollowDeleteRequest,
   FollowDeleteResponse,
 } from './follow.contract';
+import type { HttpResponse } from 'src/common/interfaces/api-response.interface';
 
 @Controller('follow')
 @ApiTags('Follow')
@@ -31,32 +26,30 @@ export class FollowController {
   constructor(private readonly followService: FollowService) {}
 
   @Post('/')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create Follow' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        user_id: { type: 'string' },
-        follower_user_id: { type: 'string' },
+        following_user_id: { type: 'string' },
       },
     },
   })
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiResponse({ type: FollowCreateResponse })
   async createLike(
     @Request() req: any,
     @Body() body: FollowCreateRequest,
-  ): Promise<FollowCreateResponse> {
+  ): Promise<HttpResponse<FollowCreateResponse>> {
     try {
-      const response = await this.followService.createFollow({
-        follower_user_id: body.follower_user_id,
-        user_id: body.user_id,
+      const result = await this.followService.createFollow({
+        follower_user_id: req.user.user_id,
+        following_user_id: body.following_user_id,
       });
-      const { follower_id, message } = response;
       return {
-        message,
-        follower_id,
+        success: true,
+        message: 'Success create follow',
+        data: result,
       };
     } catch (error) {
       throw new HttpException(
@@ -67,17 +60,16 @@ export class FollowController {
   }
 
   @Delete('/')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete Follow' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        follower_id: { type: 'string' },
         follower_user_id: { type: 'string' },
       },
     },
   })
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async deleteLike(
     @Request() req: any,
@@ -85,8 +77,8 @@ export class FollowController {
   ): Promise<FollowDeleteResponse> {
     try {
       const deleteLike = await this.followService.deleteFollow({
-        user_id: body.user_id,
-        follower_user_id: body.follower_user_id,
+        following_user_id: body.follower_user_id,
+        follower_user_id: req.user.user_id,
       });
 
       return {

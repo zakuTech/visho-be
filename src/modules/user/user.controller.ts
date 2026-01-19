@@ -8,6 +8,11 @@ import {
   UploadedFiles,
   Patch,
   UseInterceptors,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
+  BadRequestException,
+  Param,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -15,17 +20,17 @@ import {
   ApiTags,
   ApiOperation,
   ApiBody,
-  ApiResponse,
   ApiBearerAuth,
   ApiConsumes,
 } from '@nestjs/swagger';
 import {
+  EditRequest,
   RegisterRequest,
   RegisterResponse,
   UserResponse,
-  editRequest,
 } from './user.contract';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import type { HttpResponse } from 'src/common/interfaces/api-response.interface';
 
 @Controller('user')
 @ApiTags('User')
@@ -38,38 +43,33 @@ export class UserController {
 
   @Post('register')
   @ApiOperation({ summary: 'Register User' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string' },
-        password: { type: 'string' },
-        username: { type: 'string' },
-      },
-    },
-  })
-  @ApiResponse({ type: RegisterResponse })
-  async register(@Body() req: RegisterRequest): Promise<{
-    message: string;
-    results: { user_id: string; username: string; email: string };
-  }> {
-    const response = await this.userService.register(req);
+  async register(
+    @Body() body: RegisterRequest,
+  ): Promise<
+    HttpResponse<{ user_id: string; username: string; email: string }>
+  > {
+    const response = await this.userService.register(body);
     const { user_id, username, email } = response;
     return {
+      success: true,
       message: 'Success create user',
-      results: { user_id, username, email },
+      data: { user_id, username, email },
     };
   }
 
-  @Get('profile')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
-  @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req: any): Promise<UserResponse> {
-    return await this.userService.getUser(req?.user?.user_id);
+  @Get('profile/:user_id')
+  @ApiOperation({ summary: 'Get Profile' })
+  async getProfile(
+    @Param('user_id') user_id: string,
+  ): Promise<HttpResponse<UserResponse>> {
+    const result = await this.userService.getUser(user_id);
+    return {
+      success: true,
+      message: 'Success get profile',
+      data: result,
+    };
   }
 
-  @ApiBearerAuth()
   @Patch()
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -79,41 +79,45 @@ export class UserController {
       ],
       {
         limits: { fileSize: 5 * 1024 * 1024 },
+        fileFilter: (req, file, callback) => {
+          if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+            return callback(
+              new BadRequestException('Only JPG, JPEG, PNG files are allowed!'),
+              false,
+            );
+          }
+          callback(null, true);
+        },
       },
     ),
   )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload bio, profile & cover photo' })
   @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        bio: { type: 'string' },
-        profile: { type: 'string', format: 'binary' },
-        cover: { type: 'string', format: 'binary' },
-      },
-    },
+    description: 'Upload profile & cover photo',
+    type: EditRequest,
   })
-  @ApiResponse({ type: UserResponse })
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async uploadPhotoAndBio(
     @UploadedFiles()
     files: { profile?: Express.Multer.File[]; cover?: Express.Multer.File[] },
-    @Body() body: editRequest,
-    @Request() req, // req.user.user_id dari JWT
-  ): Promise<{ message: string; results: UserResponse }> {
+    @Body() body: EditRequest,
+    @Request() req,
+  ): Promise<HttpResponse<UserResponse>> {
     const response = await this.userService.edit(
+      req.user.user_id,
       {
-        user_id: req.user.user_id, // dari JWT
-        username: body.username, // dari body (bisa diedit)
-        bio: body.bio, // dari body
+        username: body.username,
+        bio: body.bio,
       },
       files,
     );
 
     return {
+      success: true,
       message: 'Success edit profile',
-      results: response,
+      data: response,
     };
   }
 }

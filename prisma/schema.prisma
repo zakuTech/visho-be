@@ -20,6 +20,7 @@ model Users {
   following          Followers[] @relation("UserFollowing")
   follower           Followers[]
   post               Posts[]
+  comments           Comments[]
 
   @@map("user")
 }
@@ -43,8 +44,10 @@ model Comments {
   user_id    String @default(uuid()) @db.VarChar(255)
   post_id    String @db.VarChar(255)
   content    String @db.Text
+  user       Users  @relation(fields: [user_id], references: [user_id], map: "fk_comment_user_id")
   post       Posts  @relation(fields: [post_id], references: [post_id], map: "fk_comment_post_id")
 
+  @@index([user_id], map: "idx_comment_user_id")
   @@index([post_id], map: "idx_comment_post_id")
   @@map("comment")
 }

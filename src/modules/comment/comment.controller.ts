@@ -1,88 +1,145 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, HttpException, HttpStatus, Inject} from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Request,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
+import { ApiOperation, ApiTags, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { CommentRequest, CommentResponse } from './comment.contract';
 import { CommentService } from './comment.service';
 import { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { HttpResponse } from 'src/common/interfaces/api-response.interface';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('comment')
 @ApiTags('Comment')
 export class CommentController {
-    private commentService: CommentService;
-     @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger;
+  private commentService: CommentService;
+  @Inject(WINSTON_MODULE_PROVIDER) private logger: Logger;
 
-    constructor(commentService: CommentService) {
-        this.commentService = commentService;
+  constructor(commentService: CommentService) {
+    this.commentService = commentService;
+  }
+
+  @Post('post-comment')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Post Comment' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        post_id: { type: 'string' },
+        content: { type: 'string' },
+      },
+    },
+  })
+  async postComment(
+    @Req() req: any,
+    @Body() body: CommentRequest,
+  ): Promise<HttpResponse<CommentResponse>> {
+    try {
+      const response = await this.commentService.postComment({
+        ...body,
+        user_id: req?.user?.user_id,
+      });
+      return {
+        success: true,
+        message: 'Success: Comment created',
+        data: response,
+      };
+    } catch (error) {
+      this.logger.error(`comment error: ${error.message}`);
+      throw new HttpException(
+        error.message,
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
+  }
 
-    @Post('post-comment')
-    @ApiOperation({ summary: 'Post Comment' })
-    @ApiBody({
-        schema: {
-            type: 'object',
-            properties: {
-                user_id: { type: 'string' },
-                post_id: { type: 'string' },
-                content: { type: 'string' },
-            },
-        },
-    })
-    @ApiResponse({ type: CommentResponse })
-    async postComment(@Body() req: CommentRequest): Promise<{ message: string; results: CommentResponse }> {
-        try {
-            const response = await this.commentService.postComment(req);
-            return {
-                message: 'Success: Comment created',
-                results: response,
-            };
-        } catch (error) {
-            this.logger.error(`comment error: ${error.message}`);
-            throw new HttpException(error.message, error.status || HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
+  @Get('get-by-user')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get Profile' })
+  async getAllComment(
+    @Request() req: any,
+  ): Promise<HttpResponse<CommentResponse[]>> {
+    const result = await this.commentService.getAllComment({
+      user_id: req?.user?.user_id,
+    });
+    return {
+      success: true,
+      message: 'Success get all comment by user',
+      data: result,
+    };
+  }
 
-    @Get('get-all')
-    @ApiOperation({ summary: 'Get Profile (Requires JWT)' })
-    async getAllComment(): Promise<CommentResponse[]> {
-        return await this.commentService.getAllComment();
-    }
+  @Get('get-by-post/:post_id')
+  @ApiOperation({ summary: 'Get Post by ID' })
+  async getCommentById(
+    @Param('post_id') post_id: string,
+  ): Promise<HttpResponse<CommentResponse[]>> {
+    const result = await this.commentService.getCommentByPostId({
+      post_id,
+    });
+    return {
+      success: true,
+      message: 'Success get all comment by post',
+      data: result,
+    };
+  }
 
-    @Get('get-by-id/:id')
-    @ApiOperation({ summary: 'Get Post by ID (Requires JWT)' })
-    @ApiResponse({ type: CommentResponse })
-    async getCommentById(@Param('id') comment_id: string): Promise<CommentResponse> {
-        return await this.commentService.getCommentById(comment_id);
-    }
+  @Patch('update/:comment_id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update Comment' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string' },
+        post_id: { type: 'string' },
+      },
+    },
+  })
+  async update(
+    @Param('comment_id') comment_id: string,
+    @Body() body: CommentRequest,
+  ): Promise<HttpResponse<CommentResponse>> {
+    const response = await this.commentService.updateComment({
+      comment_id,
+      content: body.content,
+      post_id: body.post_id,
+    });
+    return {
+      success: true,
+      message: 'Success : Comment updated',
+      data: response,
+    };
+  }
 
-    @Patch('update/:id')
-    @ApiOperation({ summary: 'Update Comment' })
-    @ApiBody({
-        schema: {
-            type: 'object',
-            properties: {
-                content: { type: 'string' },
-            },
-        },
-    })
-    @ApiResponse({ type: CommentResponse })
-    async update(@Param('id') comment_id:string ,@Body() req :CommentRequest): Promise<{ message:string; results:CommentResponse }> {
-        try {
-            const response = await this.commentService.updateComment(comment_id, req);
-            return {
-                message:'Success : Comment updated',
-                results :response,
-            };
-        } catch (error) {
-            this.logger.error(`update comment error: ${error.message}`);
-            throw new HttpException(error.message,error.status || HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-   }
-
-   @Delete('delete/:id')
-   @ApiOperation({ summary:'Delete Post by ID (Requires JWT)'})
-   @ApiResponse({type : CommentResponse})
-   async deleteComment(@Param('id') comment_id:string ):Promise<{message:string}>{
-       await this.commentService.deleteComment(comment_id);
-       return{message:'Post berhasil dihapus'};
-   }
+  @Delete('delete/:comment_id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Delete Comment by ID (Requires JWT)' })
+  async deleteComment(
+    @Param('comment_id') comment_id: string,
+  ): Promise<HttpResponse<null>> {
+    await this.commentService.deleteComment({ comment_id });
+    return {
+      success: true,
+      message: 'Success delete comment',
+      data: null,
+    };
+  }
 }

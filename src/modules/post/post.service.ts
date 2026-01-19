@@ -107,7 +107,24 @@ export class PostService {
 
   async getAllPosts(): Promise<PostResponse[]> {
     try {
-      const posts = await this.prisma.posts.findMany();
+      const posts = await this.prisma.posts.findMany({
+        select: {
+          post_id: true,
+          user_id: true,
+          media_url: true,
+          content: true,
+          user: {
+            select: {
+              user_id: true,
+              username: true,
+              photo_profile: true,
+            },
+          },
+          _count: {
+            select: { like: true, comment: true },
+          },
+        },
+      });
       if (!posts.length) {
         throw new BadRequestException('No posts found');
       }
@@ -124,6 +141,12 @@ export class PostService {
   async getPostByUserId(user_id: string): Promise<PostResponse[]> {
     try {
       const posts = await this.prisma.posts.findMany({
+        select: {
+          post_id: true,
+          user_id: true,
+          media_url: true,
+          content: true,
+        },
         where: { user_id: user_id },
       });
       if (!posts) {
@@ -142,6 +165,22 @@ export class PostService {
   async getPostByPostId(postId: string): Promise<PostResponse> {
     try {
       const post = await this.prisma.posts.findUnique({
+        select: {
+          post_id: true,
+          user_id: true,
+          media_url: true,
+          content: true,
+          user: {
+            select: {
+              user_id: true,
+              username: true,
+              photo_profile: true,
+            },
+          },
+          _count: {
+            select: { like: true, comment: true },
+          },
+        },
         where: { post_id: postId },
       });
       if (!post) {
@@ -157,40 +196,14 @@ export class PostService {
     }
   }
 
-  async getLikeByPost(postId: string): Promise<likeResponse> {
-    try {
-      const post = await this.prisma.posts.findUnique({
-        where: { post_id: postId },
-      });
-      if (!post) {
-        throw new BadRequestException('Post not found');
-      }
-      const likeCount = await this.prisma.likes.count({
-        where: {
-          post_id: post.post_id,
-        },
-      });
-      return {
-        ...post,
-        likeCount: likeCount.toString(),
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get like: ${error.message}`, error.stack);
-      throw new HttpException(
-        'Failed to get like by post id',
-        error.status || 500,
-      );
-    }
-  }
-
   async update(
     post_id: string,
-    req: UpdatePostRequest,
-  ): Promise<{ message: string; results: PostResponse }> {
+    body: UpdatePostRequest,
+  ): Promise<PostResponse> {
     try {
       const updateRequest = this.validationService.validate(
         PostValidation.Update,
-        req,
+        body,
       ) as PostRequest;
 
       const post = await this.prisma.posts.findUnique({
@@ -209,10 +222,7 @@ export class PostService {
       });
 
       this.logger.info(`post berhasil update ${updatedPost.post_id}`);
-      return {
-        message: 'Post updated successfully',
-        results: updatedPost,
-      };
+      return updatedPost;
     } catch (error) {
       this.logger.error(`Failed to update post: ${error.message}`, error.stack);
       throw new HttpException('Failed to update post', error.status || 500);
@@ -223,7 +233,7 @@ export class PostService {
     post_id: string;
     media_path: string;
     user_id: string;
-  }): Promise<{ message: string }> {
+  }): Promise<null> {
     try {
       await this.prisma.posts.delete({
         where: { post_id: params.post_id, user_id: params.user_id },
@@ -233,7 +243,7 @@ export class PostService {
         params.media_path,
       );
       this.logger.info(`post berhasil dihapus ${params.post_id}`);
-      return { message: 'Post berhasil dihapus' };
+      return null;
     } catch (error) {
       this.logger.error(`Failed to delete post: ${error.message}`, error.stack);
       throw new HttpException('Failed to delete post', error.status || 500);

@@ -12,25 +12,26 @@ import {
   UseInterceptors,
   Request,
   UseGuards,
+  BadRequestException,
+  MaxFileSizeValidator,
+  ParseFilePipe,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import {
   ApiOperation,
   ApiBody,
-  ApiResponse,
   ApiTags,
   ApiConsumes,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import {
   DeletePostRequest,
-  likeResponse,
   PostResponse,
-  PostResponseType,
   UpdatePostRequest,
 } from './post.contract';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { HttpResponse } from 'src/common/interfaces/api-response.interface';
 
 @ApiTags('Post')
 @Controller('post')
@@ -57,14 +58,37 @@ export class PostController {
       },
     },
   })
-  @ApiResponse({ type: PostResponse })
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('media_file'))
+  @UseInterceptors(
+    FileInterceptor('media_file', {
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (req, file, callback) => {
+        const allowedTypes = /(jpg|jpeg|png|mp4)$/;
+
+        if (!file.mimetype.match(allowedTypes)) {
+          return callback(
+            new BadRequestException(
+              'Only JPG, JPEG, PNG, or MP4 files are allowed!',
+            ),
+            false,
+          );
+        }
+
+        callback(null, true);
+      },
+    }),
+  )
   async createPost(
     @Request() req,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new MaxFileSizeValidator({ maxSize: 10_000_000 })],
+        fileIsRequired: true,
+      }),
+    )
+    file: Express.Multer.File,
     @Body('content') content: string,
-  ): Promise<{ message: string; results: PostResponse }> {
+  ): Promise<HttpResponse<PostResponse>> {
     const response = await this.postService.createPost({
       user_id: req?.user?.user_id,
       content,
@@ -72,28 +96,34 @@ export class PostController {
     });
 
     return {
+      success: true,
       message: 'Success create post',
-      results: response,
+      data: response,
     };
   }
 
   @Get('get-all')
   @ApiOperation({ summary: 'Get All Post' })
-  async getAllPosts(): Promise<PostResponse[]> {
-    return await this.postService.getAllPosts();
+  async getAllPosts(): Promise<HttpResponse<PostResponse[]>> {
+    const result = await await this.postService.getAllPosts();
+    return {
+      success: true,
+      message: 'Success get all posts',
+      data: result,
+    };
   }
 
   @Get('get-by-user-id/:user_id')
   @ApiOperation({ summary: 'Get Post by User ID' })
-  @ApiResponse({ type: PostResponseType })
   async getByUserId(
     @Param('user_id') user_id: string,
-  ): Promise<PostResponseType> {
+  ): Promise<HttpResponse<PostResponse[]>> {
     try {
       const results = await this.postService.getPostByUserId(user_id);
       return {
+        success: true,
         message: 'Success get post by id',
-        results,
+        data: results,
       };
     } catch (error) {
       throw new HttpException(
@@ -105,15 +135,15 @@ export class PostController {
 
   @Get('get-by-post-id/:post_id')
   @ApiOperation({ summary: 'Get Post by Post ID' })
-  @ApiResponse({ type: PostResponseType })
   async getByPostId(
     @Param('post_id') post_id: string,
-  ): Promise<{ message: string; result: PostResponse }> {
+  ): Promise<HttpResponse<PostResponse>> {
     try {
       const result = await this.postService.getPostByPostId(post_id);
       return {
+        success: true,
         message: 'Success get post by id',
-        result,
+        data: result,
       };
     } catch (error) {
       throw new HttpException(
@@ -123,49 +153,28 @@ export class PostController {
     }
   }
 
-  @Get('like-count/:post_id')
-  @ApiOperation({ summary: 'Get like count by post ID (Requires JWT)' })
-  @ApiResponse({ type: likeResponse })
-  async getLikeCount(
-    @Param('post_id') post_id: string,
-  ): Promise<{ message: string; results: likeResponse }> {
-    try {
-      const result = await this.postService.getLikeByPost(post_id);
-      return {
-        message: 'Success',
-        results: result,
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message,
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  @ApiBearerAuth()
   @Patch(':post_id')
   @ApiOperation({ summary: 'Update Post by ID' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        media_url: { type: 'string' },
         content: { type: 'string' },
       },
     },
   })
-  @ApiResponse({ type: PostResponse })
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async update(
     @Param('post_id') post_id: string,
-    @Body() req: UpdatePostRequest,
-  ): Promise<{ message: string; results: PostResponse }> {
+    @Body() body: UpdatePostRequest,
+  ): Promise<HttpResponse<PostResponse>> {
     try {
-      const response = await this.postService.update(post_id, req);
+      const response = await this.postService.update(post_id, body);
       return {
-        message: response.message,
-        results: response.results,
+        success: true,
+        message: 'Success update post',
+        data: response,
       };
     } catch (error) {
       throw new HttpException(
@@ -178,7 +187,6 @@ export class PostController {
   @ApiBearerAuth()
   @Delete(':post_id')
   @ApiOperation({ summary: 'Delete Post by ID' })
-  @ApiResponse({ type: PostResponse })
   @ApiBody({
     schema: {
       type: 'object',
@@ -192,12 +200,16 @@ export class PostController {
     @Request() req,
     @Param('post_id') post_id: string,
     @Body() body: DeletePostRequest,
-  ): Promise<{ message: string }> {
+  ): Promise<HttpResponse<null>> {
     await this.postService.deletePost({
       ...body,
       post_id,
       user_id: req?.user?.user_id,
     });
-    return { message: 'Post berhasil dihapus' };
+    return {
+      success: true,
+      message: 'Success delete post',
+      data: null,
+    };
   }
 }
