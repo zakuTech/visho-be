@@ -1,8 +1,9 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { IStorageService } from './storage.interface';
 
 @Injectable()
-export class SupabaseService {
+export class SupabaseStorageService implements IStorageService {
   private supabase: SupabaseClient;
 
   constructor() {
@@ -17,7 +18,7 @@ export class SupabaseService {
     path: string,
     file: Buffer,
     contentType: string,
-  ) {
+  ): Promise<void> {
     const { error } = await this.supabase.storage
       .from(bucket)
       .upload(path, file, {
@@ -36,7 +37,7 @@ export class SupabaseService {
     return data.publicUrl;
   }
 
-  async deleteFile(bucket: string, path: string) {
+  async deleteFile(bucket: string, path: string): Promise<void> {
     const { error } = await this.supabase.storage.from(bucket).remove([path]);
 
     if (error) {

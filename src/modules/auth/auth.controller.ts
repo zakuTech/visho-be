@@ -4,74 +4,118 @@ import {
   Body,
   UseGuards,
   Request,
-  Get,
-  Param,
-  Query,
   Patch,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   LoginRequest,
   LoginResponse,
-  EVerifyType,
-  sendOtpRequest,
-  sendOtpResponse,
-  getOtpResponse,
-  verifyOtpRequest,
-  changeEmailRequest,
-  changePasswordRequest,
+  SendOtpRequest,
+  VerifyOtpRequest,
+  ChangeEmailRequest,
+  ChangePasswordRequest,
 } from './auth.contract';
+import type { HttpResponse } from 'src/common/interfaces/api-response.interface';
 
-@ApiTags('Auth')
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiOperation({ summary: 'Login User' })
   @Post('login')
-  async login(@Body() body: LoginRequest): Promise<LoginResponse> {
-    return await this.authService.login(body);
+  @ApiOperation({ summary: 'User login' })
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body() body: LoginRequest,
+  ): Promise<HttpResponse<LoginResponse>> {
+    const result = await this.authService.login(body);
+    return {
+      success: true,
+      message: 'Login successful',
+      data: result,
+    };
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Logout User' })
+  @ApiOperation({ summary: 'User logout' })
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
-  async logout(@Request() req) {
-    return this.authService.logout(req?.user?.user_id);
+  async logout(@Request() req): Promise<HttpResponse<{ message: string }>> {
+    const result = await this.authService.logout(req.user.user_id);
+    return {
+      success: true,
+      message: 'Logout successful',
+      data: result,
+    };
   }
 
-  @ApiOperation({ summary: 'Send OTP' })
+  @ApiOperation({
+    summary: 'Send OTP for email or password change verification',
+  })
+  @HttpCode(HttpStatus.OK)
   @Post('send-otp')
-  async sendOtp(@Body() body: sendOtpRequest): Promise<sendOtpResponse> {
-    return await this.authService.sendOtp(body.email, body.verifyType);
+  async sendOtp(
+    @Body() body: SendOtpRequest,
+  ): Promise<HttpResponse<{ message: string }>> {
+    const result = await this.authService.sendOtp(body.email, body.verifyType);
+    return {
+      success: true,
+      message: result.message,
+    };
   }
 
-  @ApiOperation({ summary: 'GET OTP' })
-  @Get('otp/:email')
-  async getOtp(@Param('email') email: string): Promise<getOtpResponse> {
-    return await this.authService.getOtp(email);
-  }
-
-  @ApiOperation({ summary: 'Verify OTP' })
+  @ApiOperation({ summary: 'Verify OTP code' })
+  @HttpCode(HttpStatus.OK)
   @Post('verify-otp')
-  async verifyOtp(@Body() body: verifyOtpRequest): Promise<any> {
-    return await this.authService.verifyOtp(body.email, body.otp);
+  async verifyOtp(
+    @Body() body: VerifyOtpRequest,
+  ): Promise<HttpResponse<{ message: string }>> {
+    const result = await this.authService.verifyOtp(body.email, body.otp);
+    return {
+      success: true,
+      message: result.message,
+    };
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Change Email' })
-  @Patch('change-email')
+  @ApiOperation({ summary: 'Change user email (requires OTP verification)' })
   @UseGuards(JwtAuthGuard)
-  async changeEmail(@Request() req, @Body() body: changeEmailRequest) {
-    return this.authService.changeEmail(req?.user?.user_id, body.email);
+  @HttpCode(HttpStatus.OK)
+  @Patch('change-email')
+  async changeEmail(
+    @Request() req,
+    @Body() body: ChangeEmailRequest,
+  ): Promise<HttpResponse<{ message: string }>> {
+    const result = await this.authService.changeEmail(
+      req.user.user_id,
+      body.email,
+      body.otp,
+    );
+    return {
+      success: true,
+      message: result.message,
+    };
   }
 
-  @ApiOperation({ summary: 'Change Password' })
+  @ApiOperation({ summary: 'Change user password (requires OTP verification)' })
+  @HttpCode(HttpStatus.OK)
   @Patch('change-password')
-  async changePassword(@Body() body: changePasswordRequest) {
-    return this.authService.changePassword(body.email, body.password);
+  async changePassword(
+    @Body() body: ChangePasswordRequest,
+  ): Promise<HttpResponse<{ message: string }>> {
+    const result = await this.authService.changePassword(
+      body.email,
+      body.password,
+      body.otp,
+    );
+    return {
+      success: true,
+      message: result.message,
+    };
   }
 }

@@ -7,11 +7,10 @@ import {
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
-import { editRequest, UserResponse } from './user.contract';
-import { SupabaseService } from '../supabase/supabase.service';
-import { sanitizeFileName } from 'src/media/media.controller';
+import { EditRequest, UserResponse } from './user.contract';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import { IStorageService } from '../storage/storage.interface';
 
 interface RegisterRequest {
   username: string;
@@ -27,7 +26,8 @@ export class UserService {
   constructor(
     prisma: PrismaService,
     logger: Logger,
-    private readonly supabaseService: SupabaseService,
+    @Inject('IStorageService')
+    private readonly storageService: IStorageService,
   ) {
     this.prisma = prisma;
     this.logger = logger;
@@ -75,101 +75,122 @@ export class UserService {
         `Failed to register user: ${error.message}`,
         error.stack,
       );
-      throw new HttpException('Failed to register user', error.status || 500);
+      throw new HttpException(
+        `Failed to register user ${error.message}`,
+        error.status || 500,
+      );
     }
   }
 
   async getUser(userId: string): Promise<UserResponse | null> {
     const user = await this.prisma.users.findUnique({
+      select: {
+        user_id: true,
+        username: true,
+        email: true,
+        photo_profile: true,
+        bio: true,
+        cover_profile: true,
+      },
       where: { user_id: userId },
     });
+
     if (!user) {
       throw new BadRequestException('User not found');
     }
-    return user;
+
+    const following = await this.prisma.followers.count({
+      where: {
+        follower_user_id: userId,
+      },
+    });
+    const follower = await this.prisma.followers.count({
+      where: {
+        user_id: userId,
+      },
+    });
+    const result = {
+      ...user,
+      follower,
+      following,
+    };
+    return result;
   }
 
   async edit(
-    req: editRequest,
+    user_id: string,
+    req: EditRequest,
     files: { profile?: Express.Multer.File[]; cover?: Express.Multer.File[] },
   ): Promise<UserResponse> {
     this.logger.info(`Update photo or bio request: ${JSON.stringify(req)}`);
 
     const user = await this.prisma.users.findUnique({
-      where: { user_id: req.user_id },
+      where: { user_id },
     });
 
     if (!user) {
       throw new BadRequestException('User not found');
     }
 
-    // Default to existing values
     let photoProfileUrl = user.photo_profile;
     let photoProfilePath = user.photo_profile_path;
     let coverProfileUrl = user.cover_profile;
     let coverProfilePath = user.cover_profile_path;
 
-    // Handle profile picture upload
     if (files?.profile?.[0]) {
       const file = files.profile[0];
-      const sanitizedName = sanitizeFileName(file.originalname);
+      const sanitizedName = this.sanitizeFileName(file.originalname);
       const filename = `${Date.now()}-${sanitizedName}`;
       const storagePath = `test/profiles/${filename}`;
 
-      // Delete old profile file if exists
       if (photoProfilePath) {
-        await this.supabaseService.deleteFile(
+        await this.storageService.deleteFile(
           process.env.SUPABASE_BUCKET_NAME,
           photoProfilePath,
         );
       }
 
-      // Upload new file
-      await this.supabaseService.uploadFile(
+      await this.storageService.uploadFile(
         process.env.SUPABASE_BUCKET_NAME,
         storagePath,
         file.buffer,
         file.mimetype,
       );
 
-      photoProfileUrl = await this.supabaseService.getPublicUrl(
+      photoProfileUrl = await this.storageService.getPublicUrl(
         process.env.SUPABASE_BUCKET_NAME,
         storagePath,
       );
       photoProfilePath = storagePath;
     }
 
-    // Handle cover picture upload
     if (files?.cover?.[0]) {
       const file = files.cover[0];
-      const sanitizedName = sanitizeFileName(file.originalname);
+      const sanitizedName = this.sanitizeFileName(file.originalname);
       const filename = `${Date.now()}-${sanitizedName}`;
       const storagePath = `test/cover/${filename}`;
 
-      // Delete old cover file if exists
       if (coverProfilePath) {
-        await this.supabaseService.deleteFile(
+        await this.storageService.deleteFile(
           process.env.SUPABASE_BUCKET_NAME,
           coverProfilePath,
         );
       }
 
-      // Upload new file
-      await this.supabaseService.uploadFile(
+      await this.storageService.uploadFile(
         process.env.SUPABASE_BUCKET_NAME,
         storagePath,
         file.buffer,
         file.mimetype,
       );
 
-      coverProfileUrl = await this.supabaseService.getPublicUrl(
+      coverProfileUrl = await this.storageService.getPublicUrl(
         process.env.SUPABASE_BUCKET_NAME,
         storagePath,
       );
       coverProfilePath = storagePath;
     }
 
-    // Update user data
     const updatedUser = await this.prisma.users.update({
       where: { user_id: user.user_id },
       data: {
@@ -185,5 +206,12 @@ export class UserService {
     this.logger.info(`Berhasil memperbarui user: ${updatedUser.user_id}`);
 
     return updatedUser;
+  }
+
+  private sanitizeFileName(fileName: string): string {
+    return fileName
+      .toLowerCase()
+      .replace(/[^a-z0-9.-]/g, '-')
+      .replace(/\s+/g, '_');
   }
 }

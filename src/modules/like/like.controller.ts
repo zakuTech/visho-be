@@ -24,6 +24,7 @@ import {
   LikeDeleteRequest,
   LikeDeleteResponse,
 } from './like.contract';
+import type { HttpResponse } from 'src/common/interfaces/api-response.interface';
 
 @Controller('like')
 @ApiTags('Like')
@@ -37,7 +38,6 @@ export class LikeController {
     schema: {
       type: 'object',
       properties: {
-        user_id: { type: 'string' },
         post_id: { type: 'string' },
       },
     },
@@ -47,16 +47,17 @@ export class LikeController {
   async createLike(
     @Request() req: any,
     @Body() body: LikeCreateRequest,
-  ): Promise<LikeCreateResponse> {
+  ): Promise<HttpResponse<LikeCreateResponse>> {
     try {
       const response = await this.likeService.createLike({
         user_id: req?.user?.user_id,
         post_id: body.post_id,
       });
-      const { like_id, message } = response;
+      const { like_id } = response;
       return {
-        message,
-        like_id,
+        success: true,
+        message: 'Success create like',
+        data: { like_id },
       };
     } catch (error) {
       throw new HttpException(
@@ -73,7 +74,6 @@ export class LikeController {
     schema: {
       type: 'object',
       properties: {
-        user_id: { type: 'string' },
         post_id: { type: 'string' },
       },
     },
@@ -82,7 +82,7 @@ export class LikeController {
   async deleteLike(
     @Request() req: any,
     @Body() body: LikeDeleteRequest,
-  ): Promise<LikeDeleteResponse> {
+  ): Promise<HttpResponse<null>> {
     try {
       const deleteLike = await this.likeService.deleteLike({
         user_id: req?.user?.user_id,
@@ -90,7 +90,9 @@ export class LikeController {
       });
 
       return {
-        message: deleteLike.message,
+        success: true,
+        message: 'Success delete like',
+        data: null,
       };
     } catch (error) {
       throw new HttpException(

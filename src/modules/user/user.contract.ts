@@ -1,17 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 
 export class RegisterRequest {
-  @ApiProperty()
+  @ApiProperty({ example: 'user@gmail.com' })
+  @IsEmail({}, { message: 'Invalid email format' })
   email: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'secret*123' })
+  @IsString()
   password: string;
 
-  @ApiPropertyOptional()
+  @ApiProperty({ example: 'john' })
+  @IsString()
   username: string;
-
-  @ApiPropertyOptional()
-  profile_picture?: string;
 }
 
 export class RegisterResponseType {
@@ -31,14 +32,34 @@ export class UserResponse {
   email: string;
   profile_picture?: string;
   bio?: string;
+  photo_profile?: string;
+  cover_profile?: string;
+  follower?: number;
+  following?: number;
 }
 
-export class editRequest {
-  user_id: string;
-  username: string;
-  photo_profile?: string;
-  photo_profile_path?: string;
+export class EditRequest {
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+  })
+  @IsOptional()
+  profile?: any;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+  })
+  @IsOptional()
+  cover?: any;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  username?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
   bio?: string;
-  cover_profile?: string;
-  cover_profile_path?: string;
 }

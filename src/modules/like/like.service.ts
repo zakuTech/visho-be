@@ -20,33 +20,51 @@ export class LikeService {
     this.logger = logger;
   }
 
-  async createLike(req: LikeCreateRequest): Promise<LikeCreateResponse> {
+  async createLike(params: {
+    user_id: string;
+    post_id: string;
+  }): Promise<LikeCreateResponse> {
     try {
-      this.logger.info(`CREATE LIKE WITH USER ID ${req.user_id || '-'}`);
+      const { user_id, post_id } = params;
+      this.logger.info(`CREATE LIKE WITH USER ID ${user_id || '-'}`);
 
-      const result = await this.prisma.likes.create({
-        data: {
-          like_id: uuidv4(),
-          user_id: req.user_id,
-          post_id: req.post_id,
+      const isAlreadyLike = await this.prisma.likes.findFirst({
+        where: {
+          user_id: user_id,
+          post_id: post_id,
         },
       });
 
-      return { message: 'Success: Like created', like_id: result.like_id };
+      if (isAlreadyLike) {
+        throw new HttpException('You already like this post', 400);
+      }
+      const result = await this.prisma.likes.create({
+        data: {
+          like_id: uuidv4(),
+          user_id: user_id,
+          post_id: post_id,
+        },
+      });
+
+      return { like_id: result.like_id };
     } catch (error) {
       this.logger.error(`Failed like post: ${error.message}`, error.stack);
       throw new HttpException(error.message, error.status || 500);
     }
   }
 
-  async deleteLike(params: LikeDeleteRequest): Promise<LikeDeleteResponse> {
+  async deleteLike(params: {
+    user_id: string;
+    post_id: string;
+  }): Promise<null> {
     try {
-      this.logger.info(`DELETE LIKE WITH USER ID ${params.user_id || '-'}`);
+      const { user_id, post_id } = params;
+      this.logger.info(`DELETE LIKE WITH USER ID ${user_id || '-'}`);
 
       const data = await this.prisma.likes.findFirst({
         where: {
-          user_id: params.user_id,
-          post_id: params.post_id,
+          user_id: user_id,
+          post_id: post_id,
         },
       });
 
@@ -60,7 +78,7 @@ export class LikeService {
         },
       });
 
-      return { message: 'Success: Like deleted' };
+      return null;
     } catch (error) {
       this.logger.error(`Failed to delete like: ${error.message}`, error.stack);
       throw new HttpException('Failed to delete like', error.status || 500);
