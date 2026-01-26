@@ -57,12 +57,12 @@ export class UserController {
     };
   }
 
-  @Get('profile/:user_id')
-  @ApiOperation({ summary: 'Get Profile' })
+  @Get('profile/:username')
+  @ApiOperation({ summary: 'Get Profile by username' })
   async getProfile(
-    @Param('user_id') user_id: string,
+    @Param('username') username: string,
   ): Promise<HttpResponse<UserResponse>> {
-    const result = await this.userService.getUser(user_id);
+    const result = await this.userService.getUser(username);
     return {
       success: true,
       message: 'Success get profile',

@@ -82,8 +82,9 @@ export class UserService {
     }
   }
 
-  async getUser(userId: string): Promise<UserResponse | null> {
+  async getUser(username: string): Promise<UserResponse | null> {
     const user = await this.prisma.users.findUnique({
+      where: { username },
       select: {
         user_id: true,
         username: true,
@@ -92,7 +93,6 @@ export class UserService {
         bio: true,
         cover_profile: true,
       },
-      where: { user_id: userId },
     });
 
     if (!user) {
@@ -101,12 +101,12 @@ export class UserService {
 
     const following = await this.prisma.followers.count({
       where: {
-        follower_user_id: userId,
+        follower_user_id: user.user_id,
       },
     });
     const follower = await this.prisma.followers.count({
       where: {
-        user_id: userId,
+        user_id: user.user_id,
       },
     });
     const result = {
