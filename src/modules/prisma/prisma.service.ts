@@ -4,7 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 
@@ -13,32 +13,16 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  constructor(
-    @Inject(WINSTON_MODULE_PROVIDER)
-    private readonly logger: Logger,
-  ) {
+  private logger: Logger;
+
+  constructor(@Inject(WINSTON_MODULE_PROVIDER) logger: Logger) {
     super({
       log: ['query', 'info', 'warn', 'error'],
     });
+    this.logger = logger;
   }
 
-  async onModuleInit(): Promise<void> {
-    this.$on('query', (e) => {
-      this.logger.info(JSON.stringify(e));
-    });
-
-    this.$on('info', (e) => {
-      this.logger.info(JSON.stringify(e));
-    });
-
-    this.$on('warn', (e) => {
-      this.logger.warn(JSON.stringify(e));
-    });
-
-    this.$on('error', (e) => {
-      this.logger.error(JSON.stringify(e));
-    });
-  }
+  onModuleInit(): void {}
 
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();

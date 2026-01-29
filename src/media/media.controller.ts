@@ -9,7 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { SupabaseService } from '../modules/supabase/supabase.service';
+import { SupabaseStorageService } from 'src/modules/storage/supabase-storage.service';
 import {
   ApiTags,
   ApiConsumes,
@@ -28,7 +28,7 @@ export function sanitizeFileName(fileName: string): string {
 @ApiTags('Media')
 @Controller('media')
 export class MediaController {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly supabaseService: SupabaseStorageService) {}
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
