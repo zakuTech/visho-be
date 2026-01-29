@@ -63,11 +63,14 @@ model Likes {
 }
 
 model Followers {
-  follower_id      String @id @default(uuid()) @db.VarChar(255)
-  user_id          String @default(uuid()) @db.VarChar(255)
-  follower_user_id String @db.VarChar(255)
-  follower         Users  @relation("UserFollowing", fields: [follower_user_id], references: [user_id], map: "followers_follower_user_id_fkey")
-  user             Users  @relation(fields: [user_id], references: [user_id], map: "follower_user_id_fkey")
+  follower_id      String   @id @default(uuid()) @db.VarChar(255)
+  user_id          String   @default(uuid()) @db.VarChar(255)
+  follower_user_id String   @db.VarChar(255)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  
+  follower         Users    @relation("UserFollowing", fields: [follower_user_id], references: [user_id], map: "followers_follower_user_id_fkey")
+  user             Users    @relation(fields: [user_id], references: [user_id], map: "follower_user_id_fkey")
 
   @@index([follower_user_id], map: "idx_followers_follower_id")
   @@index([user_id], map: "idx_follower_user_id")
