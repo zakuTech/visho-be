@@ -170,6 +170,7 @@ export class PostService {
           user_id: true,
           media_url: true,
           content: true,
+          media_path: true,
           user: {
             select: {
               user_id: true,
